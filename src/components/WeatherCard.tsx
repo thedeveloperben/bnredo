@@ -1,0 +1,207 @@
+import * as React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { MapPin, RefreshCw, Thermometer, Droplets, Wind, Gauge } from 'lucide-react-native';
+import { colors, spacing, borderRadius } from '@/src/constants/theme';
+import { useWeather } from '@/src/contexts/WeatherContext';
+import { getWindDirectionLabel } from '@/src/services/weather-service';
+
+export function WeatherCard() {
+  const { weather, isLoading, error, isOffline, refreshWeather } = useWeather();
+  const [isRefreshing, setIsRefreshing] = React.useState(false);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await refreshWeather();
+    setIsRefreshing(false);
+  };
+
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator color={colors.primary} size="small" />
+          <Text style={styles.loadingText}>Loading weather...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (!weather) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.errorText}>Unable to load weather</Text>
+        <TouchableOpacity style={styles.refreshButton} onPress={handleRefresh}>
+          <RefreshCw color={colors.primary} size={16} />
+          <Text style={styles.refreshText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <View style={styles.locationRow}>
+          <MapPin color={colors.textSecondary} size={14} />
+          <Text style={styles.locationText} numberOfLines={1}>
+            {weather.locationName}
+          </Text>
+          {isOffline && (
+            <View style={styles.offlineBadge}>
+              <Text style={styles.offlineBadgeText}>Cached</Text>
+            </View>
+          )}
+          {weather.isManualOverride && (
+            <View style={styles.manualBadge}>
+              <Text style={styles.manualBadgeText}>Manual</Text>
+            </View>
+          )}
+        </View>
+        <TouchableOpacity
+          style={styles.refreshButton}
+          onPress={handleRefresh}
+          disabled={isRefreshing}
+        >
+          <RefreshCw
+            color={isRefreshing ? colors.textMuted : colors.textSecondary}
+            size={16}
+          />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.grid}>
+        <View style={styles.gridItem}>
+          <Thermometer color={colors.accent} size={18} />
+          <Text style={styles.gridValue}>{weather.temperature}°F</Text>
+          <Text style={styles.gridLabel}>Temp</Text>
+        </View>
+        <View style={styles.gridItem}>
+          <Droplets color={colors.primary} size={18} />
+          <Text style={styles.gridValue}>{weather.humidity}%</Text>
+          <Text style={styles.gridLabel}>Humidity</Text>
+        </View>
+        <View style={styles.gridItem}>
+          <Wind color={colors.textSecondary} size={18} />
+          <Text style={styles.gridValue}>
+            {weather.windSpeed}
+            <Text style={styles.gridUnit}> mph</Text>
+          </Text>
+          <Text style={styles.gridLabel}>{getWindDirectionLabel(weather.windDirection)}</Text>
+        </View>
+        <View style={styles.gridItem}>
+          <Gauge color={colors.textSecondary} size={18} />
+          <Text style={styles.gridValue}>{weather.altitude}</Text>
+          <Text style={styles.gridLabel}>Alt (ft)</Text>
+        </View>
+      </View>
+
+      {error && !isOffline && (
+        <Text style={styles.errorBanner}>{error}</Text>
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    marginHorizontal: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+  },
+  loadingText: {
+    color: colors.textSecondary,
+    fontSize: 14,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    flex: 1,
+  },
+  locationText: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    flex: 1,
+  },
+  offlineBadge: {
+    backgroundColor: colors.warning,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+  },
+  offlineBadgeText: {
+    color: colors.black,
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  manualBadge: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+  },
+  manualBadgeText: {
+    color: colors.white,
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  refreshButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    padding: spacing.xs,
+  },
+  refreshText: {
+    color: colors.primary,
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  grid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  gridItem: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  gridValue: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  gridUnit: {
+    fontSize: 12,
+    fontWeight: '400',
+  },
+  gridLabel: {
+    color: colors.textMuted,
+    fontSize: 11,
+  },
+  errorText: {
+    color: colors.error,
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  errorBanner: {
+    color: colors.warning,
+    fontSize: 11,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+  },
+});
