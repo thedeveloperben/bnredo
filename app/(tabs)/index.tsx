@@ -5,16 +5,16 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Slider from '@react-native-community/slider';
 import { Minus, Plus, ChevronDown, ChevronUp } from 'lucide-react-native';
-import { colors, spacing, borderRadius, typography } from '@/src/constants/theme';
+import { colors, spacing, borderRadius, typography, touchTargets } from '@/src/constants/theme';
 import { WeatherCard } from '@/src/components/WeatherCard';
 import { useWeather } from '@/src/contexts/WeatherContext';
 import { useClubBag } from '@/src/contexts/ClubBagContext';
 import { EnvironmentalCalculator } from '@/src/core/services/environmental-calculations';
+import { useHapticSlider } from '@/src/hooks/useHapticSlider';
 
 export default function ShotScreen() {
   const insets = useSafeAreaInsets();
@@ -23,6 +23,9 @@ export default function ShotScreen() {
 
   const [targetYardage, setTargetYardage] = React.useState(150);
   const [showBreakdown, setShowBreakdown] = React.useState(false);
+
+  // Haptic feedback for slider every 5 yards
+  const { onValueChange: onSliderHaptic, reset: resetSliderHaptic } = useHapticSlider({ interval: 5 });
 
   const calculations = React.useMemo(() => {
     if (!weather) return null;
@@ -46,7 +49,7 @@ export default function ShotScreen() {
     const altitudeEffect = EnvironmentalCalculator.calculateAltitudeEffect(weather.altitude);
 
     const totalAdjustmentPercent = adjustments.distanceAdjustment + altitudeEffect;
-    const adjustedYardage = Math.round(targetYardage * (1 + totalAdjustmentPercent / 100));
+    const adjustedYardage = Math.round(targetYardage * (1 - totalAdjustmentPercent / 100));
 
     return {
       adjustedYardage,
@@ -91,10 +94,22 @@ export default function ShotScreen() {
               maximumValue={350}
               step={1}
               value={targetYardage}
-              onValueChange={setTargetYardage}
+              onValueChange={(value) => {
+                onSliderHaptic(value);
+                setTargetYardage(value);
+              }}
+              onSlidingComplete={resetSliderHaptic}
               minimumTrackTintColor={colors.primary}
               maximumTrackTintColor={colors.border}
               thumbTintColor={colors.primary}
+              accessibilityLabel={`Target distance: ${targetYardage} yards`}
+              accessibilityRole="adjustable"
+              accessibilityValue={{
+                min: 50,
+                max: 350,
+                now: targetYardage,
+                text: `${targetYardage} yards`,
+              }}
             />
             <View style={styles.sliderLabels}>
               <Text style={styles.sliderLabel}>50</Text>
@@ -106,6 +121,9 @@ export default function ShotScreen() {
             <TouchableOpacity
               style={styles.adjustButton}
               onPress={() => handleIncrement(-5)}
+              accessibilityRole="button"
+              accessibilityLabel="Decrease distance by 5 yards"
+              accessibilityHint="Double tap to subtract 5 yards from target distance"
             >
               <Minus color={colors.text} size={20} />
               <Text style={styles.adjustButtonText}>5</Text>
@@ -113,6 +131,9 @@ export default function ShotScreen() {
             <TouchableOpacity
               style={styles.adjustButton}
               onPress={() => handleIncrement(-1)}
+              accessibilityRole="button"
+              accessibilityLabel="Decrease distance by 1 yard"
+              accessibilityHint="Double tap to subtract 1 yard from target distance"
             >
               <Minus color={colors.text} size={20} />
               <Text style={styles.adjustButtonText}>1</Text>
@@ -120,6 +141,9 @@ export default function ShotScreen() {
             <TouchableOpacity
               style={styles.adjustButton}
               onPress={() => handleIncrement(1)}
+              accessibilityRole="button"
+              accessibilityLabel="Increase distance by 1 yard"
+              accessibilityHint="Double tap to add 1 yard to target distance"
             >
               <Plus color={colors.text} size={20} />
               <Text style={styles.adjustButtonText}>1</Text>
@@ -127,6 +151,9 @@ export default function ShotScreen() {
             <TouchableOpacity
               style={styles.adjustButton}
               onPress={() => handleIncrement(5)}
+              accessibilityRole="button"
+              accessibilityLabel="Increase distance by 5 yards"
+              accessibilityHint="Double tap to add 5 yards to target distance"
             >
               <Plus color={colors.text} size={20} />
               <Text style={styles.adjustButtonText}>5</Text>
@@ -155,6 +182,10 @@ export default function ShotScreen() {
             <TouchableOpacity
               style={styles.breakdownToggle}
               onPress={() => setShowBreakdown(!showBreakdown)}
+              accessibilityRole="button"
+              accessibilityLabel={`${showBreakdown ? 'Hide' : 'Show'} calculation breakdown`}
+              accessibilityState={{ expanded: showBreakdown }}
+              accessibilityHint="Double tap to toggle breakdown details"
             >
               <Text style={styles.breakdownToggleText}>
                 {showBreakdown ? 'Hide' : 'Show'} Breakdown
@@ -275,6 +306,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     gap: 4,
     minWidth: 64,
+    minHeight: touchTargets.minimum,
     justifyContent: 'center',
   },
   adjustButtonText: {

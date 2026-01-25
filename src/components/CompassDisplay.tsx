@@ -1,16 +1,32 @@
 import * as React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import Svg, { Circle, Line, Polygon, G, Text as SvgText, Defs, RadialGradient, Stop, Path } from 'react-native-svg';
+import Svg, { Circle, Line, Polygon, G, Text as SvgText, Defs, RadialGradient, Stop } from 'react-native-svg';
 import { colors } from '@/src/constants/theme';
+import { useReduceMotion } from '@/src/hooks/useReduceMotion';
+import { getWindColor, getWindEffectDescription } from '@/src/features/wind/utils/wind-colors';
 
 interface CompassDisplayProps {
   heading: number;
   windDirection: number;
   windSpeed: number;
   isLocked?: boolean;
+  reduceMotion?: boolean;
 }
 
-export function CompassDisplay({ heading, windDirection, windSpeed, isLocked = false }: CompassDisplayProps) {
+export function CompassDisplay({ heading, windDirection, windSpeed, isLocked = false, reduceMotion: reduceMotionProp }: CompassDisplayProps) {
+  // Reduce motion preference - use prop if provided, otherwise use hook
+  const systemReduceMotion = useReduceMotion();
+  const reduceMotion = reduceMotionProp ?? systemReduceMotion;
+
+  // Get dynamic wind color based on wind direction relative to heading
+  const windColorResult = getWindColor(windDirection, heading, windSpeed);
+  const windArrowColor = windColorResult.color;
+  const windArrowOpacity = windColorResult.opacity;
+
+  // Accessibility description with wind effect
+  const windEffectDesc = getWindEffectDescription(windColorResult.effect);
+  const accessibilityDescription = `Compass showing ${Math.round(heading)} degrees heading. Wind ${Math.round(windSpeed)} miles per hour, ${windEffectDesc}. ${isLocked ? 'Target locked.' : 'Facing direction.'}`;
+
   const size = 340;
   const center = size / 2;
   const outerRadius = 120;
@@ -38,7 +54,7 @@ export function CompassDisplay({ heading, windDirection, windSpeed, isLocked = f
     };
   };
 
-  const windAngle = windDirection - heading;
+  const windAngle = windDirection;
 
   const windStart = getPoint(windAngle, outerRadius - 8);
   const windEnd = getPoint(windAngle, innerRadius + 12);
@@ -46,7 +62,6 @@ export function CompassDisplay({ heading, windDirection, windSpeed, isLocked = f
 
   const windArrowTip = windEnd;
   const windArrowSize = 14;
-  const windArrowBack = 20;
   const windArrowNotch = 8;
   const windArrowLeft = {
     x: windArrowTip.x + windArrowSize * Math.cos(windAngleRad - Math.PI / 4),
@@ -125,8 +140,14 @@ export function CompassDisplay({ heading, windDirection, windSpeed, isLocked = f
   };
 
   return (
-    <View style={styles.container}>
-      <Svg width={size} height={size}>
+    <View
+      style={styles.container}
+      accessible={true}
+      accessibilityRole="image"
+      accessibilityLabel={accessibilityDescription}
+      accessibilityLiveRegion="polite"
+    >
+      <Svg width={size} height={size} accessibilityElementsHidden={true}>
         <Defs>
           <RadialGradient id="centerGradient" cx="50%" cy="50%">
             <Stop offset="0%" stopColor={colors.surfaceElevated} stopOpacity="1" />
@@ -158,44 +179,46 @@ export function CompassDisplay({ heading, windDirection, windSpeed, isLocked = f
           opacity={0.95}
         />
 
-        {getTicks()}
+        <G rotation={reduceMotion ? 0 : -heading} origin={`${center}, ${center}`}>
+          {getTicks()}
 
-        {cardinalPoints.map((point) => getCardinalBackground(point.angle, point.cardinal))}
+          {cardinalPoints.map((point) => getCardinalBackground(point.angle, point.cardinal))}
 
-        {cardinalPoints.map((point) => {
-          const pos = getPoint(point.angle, cardinalRadius);
-          const isNorth = point.label === 'N';
-          const isCardinal = point.cardinal;
-          return (
-            <SvgText
-              key={point.label}
-              x={pos.x}
-              y={pos.y}
-              fontSize={isNorth ? 18 : isCardinal ? 14 : 11}
-              fontWeight={isNorth ? '800' : isCardinal ? '700' : '500'}
-              fill={isNorth ? colors.error : isCardinal ? colors.text : colors.textMuted}
-              textAnchor="middle"
-              alignmentBaseline="middle"
-            >
-              {point.label}
-            </SvgText>
-          );
-        })}
+          {cardinalPoints.map((point) => {
+            const pos = getPoint(point.angle, cardinalRadius);
+            const isNorth = point.label === 'N';
+            const isCardinal = point.cardinal;
+            return (
+              <SvgText
+                key={point.label}
+                x={pos.x}
+                y={pos.y}
+                fontSize={isNorth ? 18 : isCardinal ? 14 : 11}
+                fontWeight={isNorth ? '800' : isCardinal ? '700' : '500'}
+                fill={isNorth ? colors.error : isCardinal ? colors.text : colors.textMuted}
+                textAnchor="middle"
+                alignmentBaseline="middle"
+              >
+                {point.label}
+              </SvgText>
+            );
+          })}
+        </G>
 
-        <G>
+        <G opacity={windArrowOpacity}>
           <Line
             x1={windStart.x}
             y1={windStart.y}
             x2={windEnd.x}
             y2={windEnd.y}
-            stroke={colors.accent}
+            stroke={windArrowColor}
             strokeWidth={5}
             strokeLinecap="butt"
           />
 
           <Polygon
             points={`${windArrowTip.x},${windArrowTip.y} ${windArrowLeft.x},${windArrowLeft.y} ${windArrowNotchPoint.x},${windArrowNotchPoint.y} ${windArrowRight.x},${windArrowRight.y}`}
-            fill={colors.accent}
+            fill={windArrowColor}
             stroke={colors.background}
             strokeWidth={1}
             strokeLinejoin="miter"
@@ -205,7 +228,7 @@ export function CompassDisplay({ heading, windDirection, windSpeed, isLocked = f
             cx={windStart.x}
             cy={windStart.y}
             r={6}
-            fill={colors.accent}
+            fill={windArrowColor}
             stroke={colors.background}
             strokeWidth={2}
           />
@@ -245,9 +268,10 @@ export function CompassDisplay({ heading, windDirection, windSpeed, isLocked = f
           y={center - 6}
           fontSize={18}
           fontWeight="700"
-          fill={colors.accent}
+          fill={windArrowColor}
           textAnchor="middle"
           alignmentBaseline="middle"
+          opacity={windArrowOpacity}
         >
           {Math.round(windSpeed)}
         </SvgText>
@@ -264,20 +288,37 @@ export function CompassDisplay({ heading, windDirection, windSpeed, isLocked = f
         </SvgText>
       </Svg>
 
-      <View style={styles.legendRow}>
+      <View
+        style={styles.legendRow}
+        accessibilityRole="none"
+        importantForAccessibility="no-hide-descendants"
+      >
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, { backgroundColor: colors.primary }]} />
           <Text style={styles.legendText}>Your Heading</Text>
         </View>
         <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: colors.accent }]} />
-          <Text style={styles.legendText}>Wind Direction</Text>
+          <View style={[styles.legendDot, { backgroundColor: windArrowColor, opacity: windArrowOpacity }]} />
+          <Text style={styles.legendText}>Wind ({windColorResult.effect})</Text>
         </View>
       </View>
 
-      <View style={styles.headingContainer}>
-        <Text style={styles.headingValue}>{Math.round(heading)}°</Text>
-        <Text style={[styles.headingLabel, isLocked && styles.headingLabelLocked]}>
+      <View
+        style={styles.headingContainer}
+        accessible={true}
+        accessibilityRole="text"
+        accessibilityLabel={`Heading: ${Math.round(heading)} degrees. ${isLocked ? 'Target locked' : 'Facing direction'}`}
+      >
+        <Text
+          style={styles.headingValue}
+          importantForAccessibility="no"
+        >
+          {Math.round(heading)}°
+        </Text>
+        <Text
+          style={[styles.headingLabel, isLocked && styles.headingLabelLocked]}
+          importantForAccessibility="no"
+        >
           {isLocked ? 'Target Locked' : 'Facing Direction'}
         </Text>
       </View>

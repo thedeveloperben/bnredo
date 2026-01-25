@@ -7,11 +7,18 @@ import {
   TouchableOpacity,
   TextInput,
   Switch,
-  Platform,
 } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronRight, Crown, Check } from 'lucide-react-native';
-import { colors, spacing, borderRadius, typography } from '@/src/constants/theme';
+import { colors, spacing, borderRadius, typography, touchTargets, animation } from '@/src/constants/theme';
+import { AnimatedCollapsible } from '@/src/components/ui';
+import { useReduceMotion } from '@/src/hooks/useReduceMotion';
 import { useUserPreferences } from '@/src/contexts/UserPreferencesContext';
 import { useClubBag } from '@/src/contexts/ClubBagContext';
 
@@ -24,6 +31,29 @@ export default function SettingsScreen() {
   const [showClubBag, setShowClubBag] = React.useState(false);
   const [editingClub, setEditingClub] = React.useState<string | null>(null);
   const [editDistance, setEditDistance] = React.useState('');
+  const reduceMotion = useReduceMotion();
+
+  // Animated chevron rotation
+  const chevronRotation = useSharedValue(0);
+
+  const toggleClubBag = () => {
+    const newState = !showClubBag;
+    setShowClubBag(newState);
+
+    const targetRotation = newState ? 90 : 0;
+    if (reduceMotion) {
+      chevronRotation.value = targetRotation;
+    } else {
+      chevronRotation.value = withTiming(targetRotation, {
+        duration: animation.duration.normal,
+        easing: Easing.out(Easing.cubic),
+      });
+    }
+  };
+
+  const chevronAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${chevronRotation.value}deg` }],
+  }));
 
   const handleDistanceSubmit = (clubKey: string) => {
     const distance = parseInt(editDistance, 10);
@@ -40,7 +70,7 @@ export default function SettingsScreen() {
     options: Array<{ label: string; value: OptionValue }>,
     onSelect: (value: OptionValue) => void
   ) => (
-    <View style={styles.optionRow}>
+    <View style={styles.optionRow} accessibilityRole="radiogroup" accessibilityLabel={label}>
       <Text style={styles.optionLabel}>{label}</Text>
       <View style={styles.optionButtons}>
         {options.map(option => (
@@ -51,6 +81,9 @@ export default function SettingsScreen() {
               value === option.value && styles.optionButtonActive,
             ]}
             onPress={() => onSelect(option.value)}
+            accessibilityRole="radio"
+            accessibilityLabel={`${label}: ${option.label}`}
+            accessibilityState={{ checked: value === option.value }}
           >
             <Text
               style={[
@@ -98,8 +131,18 @@ export default function SettingsScreen() {
                 preferences.isPremium && styles.premiumToggleActive,
               ]}
               onPress={() => updatePreferences({ isPremium: !preferences.isPremium })}
+              accessibilityRole="button"
+              accessibilityLabel={preferences.isPremium ? 'Downgrade to free plan' : 'Upgrade to premium'}
+              accessibilityState={{ selected: preferences.isPremium }}
             >
-              <Text style={styles.premiumToggleText}>
+              <Text
+                style={[
+                  styles.premiumToggleText,
+                  preferences.isPremium
+                    ? styles.premiumToggleTextActive
+                    : styles.premiumToggleTextInactive,
+                ]}
+              >
                 {preferences.isPremium ? 'Downgrade' : 'Upgrade'}
               </Text>
             </TouchableOpacity>
@@ -161,17 +204,19 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           <TouchableOpacity
             style={styles.sectionHeader}
-            onPress={() => setShowClubBag(!showClubBag)}
+            onPress={toggleClubBag}
+            accessibilityRole="button"
+            accessibilityLabel="My Clubs"
+            accessibilityHint={showClubBag ? 'Double tap to collapse' : 'Double tap to expand'}
+            accessibilityState={{ expanded: showClubBag }}
           >
-            <Text style={styles.sectionTitle}>My Clubs</Text>
-            <ChevronRight
-              color={colors.textSecondary}
-              size={20}
-              style={{ transform: [{ rotate: showClubBag ? '90deg' : '0deg' }] }}
-            />
+            <Text style={styles.sectionTitleNoMargin}>My Clubs</Text>
+            <Animated.View style={chevronAnimatedStyle}>
+              <ChevronRight color={colors.textSecondary} size={20} />
+            </Animated.View>
           </TouchableOpacity>
 
-          {showClubBag && (
+          <AnimatedCollapsible expanded={showClubBag}>
             <View style={styles.clubList}>
               {clubs.map(club => (
                 <View key={club.key} style={styles.clubRow}>
@@ -180,6 +225,10 @@ export default function SettingsScreen() {
                     onValueChange={value => updateClub(club.key, { isEnabled: value })}
                     trackColor={{ false: colors.border, true: colors.primaryDark }}
                     thumbColor={club.isEnabled ? colors.primary : colors.textMuted}
+                    accessibilityRole="switch"
+                    accessibilityLabel={`${club.name} club`}
+                    accessibilityState={{ checked: club.isEnabled }}
+                    accessibilityHint={`Double tap to ${club.isEnabled ? 'disable' : 'enable'} this club`}
                   />
                   <Text
                     style={[
@@ -200,10 +249,14 @@ export default function SettingsScreen() {
                         autoFocus
                         selectTextOnFocus
                         maxLength={3}
+                        accessibilityLabel={`${club.name} distance in yards`}
+                        accessibilityHint="Enter distance between 1 and 400 yards"
                       />
                       <TouchableOpacity
                         style={styles.distanceSave}
                         onPress={() => handleDistanceSubmit(club.key)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Save ${club.name} distance`}
                       >
                         <Check color={colors.primary} size={18} />
                       </TouchableOpacity>
@@ -215,6 +268,8 @@ export default function SettingsScreen() {
                         setEditingClub(club.key);
                         setEditDistance(String(club.customDistance));
                       }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Edit ${club.name} distance, currently ${club.customDistance} yards`}
                     >
                       <Text style={styles.distanceText}>
                         {club.customDistance} yds
@@ -224,7 +279,7 @@ export default function SettingsScreen() {
                 </View>
               ))}
             </View>
-          )}
+          </AnimatedCollapsible>
         </View>
 
         <View style={styles.footer}>
@@ -275,6 +330,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: spacing.md,
   },
+  sectionTitleNoMargin: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '600',
+  },
   premiumBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -309,9 +369,14 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   premiumToggleText: {
-    color: colors.black,
     fontSize: 13,
     fontWeight: '600',
+  },
+  premiumToggleTextActive: {
+    color: colors.text,
+  },
+  premiumToggleTextInactive: {
+    color: colors.black,
   },
   devNote: {
     color: colors.textMuted,
@@ -339,7 +404,9 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     backgroundColor: colors.surfaceElevated,
     minWidth: 64,
+    minHeight: touchTargets.minimum,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   optionButtonActive: {
     backgroundColor: colors.primary,

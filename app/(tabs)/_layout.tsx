@@ -16,12 +16,14 @@ export default function TabLayout() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textSecondary,
         tabBarLabelStyle: styles.tabBarLabel,
+        tabBarAccessibilityLabel: 'Main navigation',
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
           title: 'Shot',
+          tabBarAccessibilityLabel: 'Shot Calculator tab',
           tabBarIcon: ({ color, size }) => (
             <Flag color={color} size={size} strokeWidth={2} />
           ),
@@ -31,11 +33,19 @@ export default function TabLayout() {
         name="wind"
         options={{
           title: 'Wind',
+          tabBarAccessibilityLabel: isPremium
+            ? 'Wind Calculator tab'
+            : 'Wind Calculator tab, locked, premium feature',
           tabBarIcon: ({ color, size }) => (
             isPremium ? (
               <Wind color={color} size={size} strokeWidth={2} />
             ) : (
-              <Lock color={color} size={size - 4} strokeWidth={2} />
+              <Lock
+                color={color}
+                size={size - 4}
+                strokeWidth={2}
+                accessibilityLabel="Locked"
+              />
             )
           ),
         }}
@@ -44,6 +54,7 @@ export default function TabLayout() {
         name="settings"
         options={{
           title: 'Settings',
+          tabBarAccessibilityLabel: 'Settings tab',
           tabBarIcon: ({ color, size }) => (
             <Settings color={color} size={size} strokeWidth={2} />
           ),

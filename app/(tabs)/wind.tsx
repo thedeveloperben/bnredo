@@ -6,18 +6,21 @@ import {
   TouchableOpacity,
   Platform,
   ScrollView,
+  Animated,
+  AccessibilityInfo,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Lock, Wind, Navigation, Target, Minus, Plus, AlertCircle } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { colors, spacing, borderRadius, typography } from '@/src/constants/theme';
+import { colors, spacing, borderRadius, typography, touchTargets } from '@/src/constants/theme';
 import { useWeather } from '@/src/contexts/WeatherContext';
 import { useUserPreferences } from '@/src/contexts/UserPreferencesContext';
 import { getWindDirectionLabel } from '@/src/services/weather-service';
 import { WindResultsModal } from '@/src/components/WindResultsModal';
 import { CompassDisplay } from '@/src/components/CompassDisplay';
 import { useCompassHeading } from '@/src/hooks/useCompassHeading';
+import { useHapticSlider } from '@/src/hooks/useHapticSlider';
 
 export default function WindScreen() {
   const insets = useSafeAreaInsets();
@@ -30,8 +33,55 @@ export default function WindScreen() {
   const [showResults, setShowResults] = React.useState(false);
   const [targetYardage, setTargetYardage] = React.useState(150);
 
+  // Haptic feedback for slider every 5 yards
+  const { onValueChange: onSliderHaptic, reset: resetSliderHaptic } = useHapticSlider({ interval: 5 });
+
+  // Reduce motion preference
+  const [reduceMotionEnabled, setReduceMotionEnabled] = React.useState(false);
+
+  React.useEffect(() => {
+    const checkReduceMotion = async () => {
+      const isReduceMotionEnabled = await AccessibilityInfo.isReduceMotionEnabled();
+      setReduceMotionEnabled(isReduceMotionEnabled);
+    };
+    checkReduceMotion();
+
+    const subscription = AccessibilityInfo.addEventListener(
+      'reduceMotionChanged',
+      (isEnabled) => setReduceMotionEnabled(isEnabled)
+    );
+
+    return () => subscription.remove();
+  }, []);
+
+  // Animation values for visual feedback
+  const lockButtonScale = React.useRef(new Animated.Value(1)).current;
+  const fineAdjustScaleMinus = React.useRef(new Animated.Value(1)).current;
+  const fineAdjustScalePlus = React.useRef(new Animated.Value(1)).current;
+
+  const animateButtonPress = (scaleValue: Animated.Value) => {
+    // Skip animation if reduce motion is enabled
+    if (reduceMotionEnabled) {
+      return;
+    }
+
+    Animated.sequence([
+      Animated.timing(scaleValue, {
+        toValue: 0.92,
+        duration: 80,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleValue, {
+        toValue: 1,
+        duration: 120,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
   const handleLock = () => {
     if (!preferences.isPremium) return;
+    animateButtonPress(lockButtonScale);
     setLockedHeading(heading);
     setIsLocked(true);
     setShowResults(true);
@@ -54,14 +104,17 @@ export default function WindScreen() {
   };
 
   const handleSliderChange = (value: number) => {
-    setTargetYardage(Math.round(value));
+    const roundedValue = Math.round(value);
+    onSliderHaptic(roundedValue);
+    setTargetYardage(roundedValue);
   };
 
   const handleSliderComplete = () => {
-    triggerHaptic();
+    resetSliderHaptic();
   };
 
-  const adjustYardage = (amount: number) => {
+  const adjustYardage = (amount: number, scaleValue: Animated.Value) => {
+    animateButtonPress(scaleValue);
     setTargetYardage(prev => {
       const newValue = Math.max(50, Math.min(350, prev + amount));
       if (newValue !== prev) {
@@ -105,7 +158,13 @@ export default function WindScreen() {
             </View>
           </View>
 
-          <TouchableOpacity style={styles.upgradeButton} onPress={handleUpgrade}>
+          <TouchableOpacity
+            style={styles.upgradeButton}
+            onPress={handleUpgrade}
+            accessibilityRole="button"
+            accessibilityLabel="Unlock Premium features"
+            accessibilityHint="Double tap to upgrade to premium and access wind calculator"
+          >
             <Text style={styles.upgradeButtonText}>Unlock Premium</Text>
           </TouchableOpacity>
           <Text style={styles.devNote}>(Dev: Tap to simulate premium)</Text>
@@ -130,6 +189,7 @@ export default function WindScreen() {
             windDirection={weather?.windDirection ?? 0}
             windSpeed={weather?.windSpeed ?? 0}
             isLocked={isLocked}
+            reduceMotion={reduceMotionEnabled}
           />
         </View>
 
@@ -169,10 +229,15 @@ export default function WindScreen() {
 
           <View style={styles.sliderContainer}>
             <TouchableOpacity
-              style={styles.fineAdjustButton}
-              onPress={() => adjustYardage(-1)}
+              onPress={() => adjustYardage(-1, fineAdjustScaleMinus)}
+              accessibilityRole="button"
+              accessibilityLabel="Decrease distance by 1 yard"
+              accessibilityHint="Double tap to subtract 1 yard"
+              activeOpacity={0.7}
             >
-              <Minus color={colors.text} size={18} />
+              <Animated.View style={[styles.fineAdjustButton, { transform: [{ scale: fineAdjustScaleMinus }] }]}>
+                <Minus color={colors.text} size={18} />
+              </Animated.View>
             </TouchableOpacity>
 
             <Slider
@@ -186,13 +251,26 @@ export default function WindScreen() {
               minimumTrackTintColor={colors.primary}
               maximumTrackTintColor={colors.surfaceElevated}
               thumbTintColor={colors.primary}
+              accessibilityLabel={`Target distance: ${targetYardage} yards`}
+              accessibilityRole="adjustable"
+              accessibilityValue={{
+                min: 50,
+                max: 350,
+                now: targetYardage,
+                text: `${targetYardage} yards`,
+              }}
             />
 
             <TouchableOpacity
-              style={styles.fineAdjustButton}
-              onPress={() => adjustYardage(1)}
+              onPress={() => adjustYardage(1, fineAdjustScalePlus)}
+              accessibilityRole="button"
+              accessibilityLabel="Increase distance by 1 yard"
+              accessibilityHint="Double tap to add 1 yard"
+              activeOpacity={0.7}
             >
-              <Plus color={colors.text} size={18} />
+              <Animated.View style={[styles.fineAdjustButton, { transform: [{ scale: fineAdjustScalePlus }] }]}>
+                <Plus color={colors.text} size={18} />
+              </Animated.View>
             </TouchableOpacity>
           </View>
 
@@ -204,18 +282,27 @@ export default function WindScreen() {
       </ScrollView>
 
       <TouchableOpacity
-        style={[
-          styles.lockButton,
-          preferences.handPreference === 'left' && styles.lockButtonLeft,
-          !weather && styles.lockButtonDisabled,
-        ]}
         onPress={handleLock}
         disabled={!weather}
+        accessibilityRole="button"
+        accessibilityLabel="Lock target direction"
+        accessibilityHint={weather ? "Double tap to lock current compass heading as target" : "Weather data required to lock target"}
+        accessibilityState={{ disabled: !weather }}
+        activeOpacity={0.8}
       >
-        <Target color={weather ? colors.white : colors.textMuted} size={28} />
-        <Text style={[styles.lockButtonText, !weather && styles.lockButtonTextDisabled]}>
-          Lock Target
-        </Text>
+        <Animated.View
+          style={[
+            styles.lockButton,
+            preferences.handPreference === 'left' && styles.lockButtonLeft,
+            !weather && styles.lockButtonDisabled,
+            { transform: [{ scale: lockButtonScale }] },
+          ]}
+        >
+          <Target color={weather ? colors.white : colors.textMuted} size={28} />
+          <Text style={[styles.lockButtonText, !weather && styles.lockButtonTextDisabled]}>
+            Lock Target
+          </Text>
+        </Animated.View>
       </TouchableOpacity>
 
       <WindResultsModal
@@ -427,9 +514,9 @@ const styles = StyleSheet.create({
     height: 40,
   },
   fineAdjustButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: touchTargets.minimum,
+    height: touchTargets.minimum,
+    borderRadius: touchTargets.minimum / 2,
     backgroundColor: colors.surfaceElevated,
     alignItems: 'center',
     justifyContent: 'center',
@@ -475,6 +562,7 @@ const styles = StyleSheet.create({
   },
   lockButtonDisabled: {
     backgroundColor: colors.surfaceElevated,
+    opacity: 0.5,
   },
   lockButtonText: {
     color: colors.white,

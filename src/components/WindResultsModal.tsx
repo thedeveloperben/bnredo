@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, Wind, AlertTriangle, ArrowLeft, ArrowRight, RotateCcw } from 'lucide-react-native';
-import { colors, spacing, borderRadius, typography } from '@/src/constants/theme';
+import { colors, spacing, borderRadius, typography, hitSlop } from '@/src/constants/theme';
 import { useWeather } from '@/src/contexts/WeatherContext';
 import { useClubBag } from '@/src/contexts/ClubBagContext';
 import { calculateWindEffect } from '@/src/core/services/wind-calculator';
@@ -109,7 +109,7 @@ export function WindResultsModal({
 
   const getAimDirection = (offset: number): string => {
     if (Math.abs(offset) < 1) return 'On target';
-    return offset > 0 ? `Aim ${Math.abs(offset)} yds LEFT` : `Aim ${Math.abs(offset)} yds RIGHT`;
+    return offset > 0 ? `Aim ${Math.abs(offset)} yds RIGHT` : `Aim ${Math.abs(offset)} yds LEFT`;
   };
 
   if (!calculations) return null;
@@ -122,11 +122,23 @@ export function WindResultsModal({
     >
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={onClose}
+            accessibilityRole="button"
+            accessibilityLabel="Close wind calculation"
+            hitSlop={hitSlop.medium}
+          >
             <X color={colors.text} size={24} />
           </TouchableOpacity>
-          <Text style={styles.title}>Wind Calculation</Text>
-          <TouchableOpacity style={styles.recalcButton} onPress={onClose}>
+          <Text style={styles.title} accessibilityRole="header">Wind Calculation</Text>
+          <TouchableOpacity
+            style={styles.recalcButton}
+            onPress={onClose}
+            accessibilityRole="button"
+            accessibilityLabel="Recalculate wind effect"
+            hitSlop={hitSlop.medium}
+          >
             <RotateCcw color={colors.primary} size={20} />
           </TouchableOpacity>
         </View>
@@ -140,7 +152,11 @@ export function WindResultsModal({
             <Text style={styles.targetValue}>{targetYardage} yards</Text>
           </View>
 
-          <View style={styles.scenarioCard}>
+          <View
+            style={styles.scenarioCard}
+            accessible
+            accessibilityLabel={`Sustained wind at ${weather?.windSpeed} miles per hour. Plays like ${calculations.sustained.adjustedYardage} yards. ${getAimDirection(calculations.sustained.lateralOffset)}. ${calculations.sustained.recommendedClub ? `Recommended club: ${calculations.sustained.recommendedClub}` : ''}`}
+          >
             <View style={styles.scenarioHeader}>
               <Wind color={colors.primary} size={20} />
               <Text style={styles.scenarioTitle}>Sustained Wind</Text>
@@ -157,9 +173,9 @@ export function WindResultsModal({
 
             <View style={styles.aimIndicator}>
               {calculations.sustained.lateralOffset > 0 ? (
-                <ArrowLeft color={colors.accent} size={24} />
-              ) : calculations.sustained.lateralOffset < 0 ? (
                 <ArrowRight color={colors.accent} size={24} />
+              ) : calculations.sustained.lateralOffset < 0 ? (
+                <ArrowLeft color={colors.accent} size={24} />
               ) : null}
               <Text style={styles.aimText}>
                 {getAimDirection(calculations.sustained.lateralOffset)}
@@ -176,7 +192,11 @@ export function WindResultsModal({
             )}
           </View>
 
-          <View style={[styles.scenarioCard, styles.gustCard]}>
+          <View
+            style={[styles.scenarioCard, styles.gustCard]}
+            accessible
+            accessibilityLabel={`With gusts at ${weather?.windGust} miles per hour. Plays like ${calculations.gust.adjustedYardage} yards. ${getAimDirection(calculations.gust.lateralOffset)}. ${calculations.gust.recommendedClub ? `Recommended club: ${calculations.gust.recommendedClub}` : ''}`}
+          >
             <View style={styles.scenarioHeader}>
               <AlertTriangle color={colors.warning} size={20} />
               <Text style={styles.scenarioTitle}>With Gusts</Text>
@@ -195,9 +215,9 @@ export function WindResultsModal({
 
             <View style={styles.aimIndicator}>
               {calculations.gust.lateralOffset > 0 ? (
-                <ArrowLeft color={colors.warning} size={24} />
-              ) : calculations.gust.lateralOffset < 0 ? (
                 <ArrowRight color={colors.warning} size={24} />
+              ) : calculations.gust.lateralOffset < 0 ? (
+                <ArrowLeft color={colors.warning} size={24} />
               ) : null}
               <Text style={[styles.aimText, { color: colors.warning }]}>
                 {getAimDirection(calculations.gust.lateralOffset)}
@@ -240,7 +260,13 @@ export function WindResultsModal({
           </View>
         </ScrollView>
 
-        <TouchableOpacity style={styles.doneButton} onPress={onClose}>
+        <TouchableOpacity
+          style={styles.doneButton}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel="Back to compass"
+          accessibilityHint="Double tap to return to the wind calculator compass"
+        >
           <Text style={styles.doneButtonText}>Back to Compass</Text>
         </TouchableOpacity>
       </View>

@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { MapPin, RefreshCw, Thermometer, Droplets, Wind, Gauge } from 'lucide-react-native';
-import { colors, spacing, borderRadius } from '@/src/constants/theme';
+import { colors, spacing, borderRadius, hitSlop } from '@/src/constants/theme';
 import { useWeather } from '@/src/contexts/WeatherContext';
 import { getWindDirectionLabel } from '@/src/services/weather-service';
 
@@ -17,9 +17,9 @@ export function WeatherCard() {
 
   if (isLoading) {
     return (
-      <View style={styles.container}>
+      <View style={styles.container} accessibilityRole="alert" accessibilityLiveRegion="polite">
         <View style={styles.loadingContainer}>
-          <ActivityIndicator color={colors.primary} size="small" />
+          <ActivityIndicator color={colors.primary} size="small" accessibilityLabel="Loading" />
           <Text style={styles.loadingText}>Loading weather...</Text>
         </View>
       </View>
@@ -28,9 +28,15 @@ export function WeatherCard() {
 
   if (!weather) {
     return (
-      <View style={styles.container}>
+      <View style={styles.container} accessibilityRole="alert">
         <Text style={styles.errorText}>Unable to load weather</Text>
-        <TouchableOpacity style={styles.refreshButton} onPress={handleRefresh}>
+        <TouchableOpacity
+          style={styles.refreshButton}
+          onPress={handleRefresh}
+          accessibilityRole="button"
+          accessibilityLabel="Retry loading weather"
+          hitSlop={hitSlop.medium}
+        >
           <RefreshCw color={colors.primary} size={16} />
           <Text style={styles.refreshText}>Retry</Text>
         </TouchableOpacity>
@@ -61,6 +67,10 @@ export function WeatherCard() {
           style={styles.refreshButton}
           onPress={handleRefresh}
           disabled={isRefreshing}
+          accessibilityRole="button"
+          accessibilityLabel={isRefreshing ? "Refreshing weather" : "Refresh weather data"}
+          accessibilityState={{ busy: isRefreshing }}
+          hitSlop={hitSlop.medium}
         >
           <RefreshCw
             color={isRefreshing ? colors.textMuted : colors.textSecondary}
@@ -69,18 +79,18 @@ export function WeatherCard() {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.grid}>
-        <View style={styles.gridItem}>
+      <View style={styles.grid} accessibilityRole="summary">
+        <View style={styles.gridItem} accessible accessibilityLabel={`Temperature: ${weather.temperature} degrees Fahrenheit`}>
           <Thermometer color={colors.accent} size={18} />
           <Text style={styles.gridValue}>{weather.temperature}°F</Text>
           <Text style={styles.gridLabel}>Temp</Text>
         </View>
-        <View style={styles.gridItem}>
+        <View style={styles.gridItem} accessible accessibilityLabel={`Humidity: ${weather.humidity} percent`}>
           <Droplets color={colors.primary} size={18} />
           <Text style={styles.gridValue}>{weather.humidity}%</Text>
           <Text style={styles.gridLabel}>Humidity</Text>
         </View>
-        <View style={styles.gridItem}>
+        <View style={styles.gridItem} accessible accessibilityLabel={`Wind: ${weather.windSpeed} miles per hour from ${getWindDirectionLabel(weather.windDirection)}`}>
           <Wind color={colors.textSecondary} size={18} />
           <Text style={styles.gridValue}>
             {weather.windSpeed}
@@ -88,7 +98,7 @@ export function WeatherCard() {
           </Text>
           <Text style={styles.gridLabel}>{getWindDirectionLabel(weather.windDirection)}</Text>
         </View>
-        <View style={styles.gridItem}>
+        <View style={styles.gridItem} accessible accessibilityLabel={`Altitude: ${weather.altitude} feet`}>
           <Gauge color={colors.textSecondary} size={18} />
           <Text style={styles.gridValue}>{weather.altitude}</Text>
           <Text style={styles.gridLabel}>Alt (ft)</Text>

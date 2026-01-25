@@ -72,3 +72,89 @@ export const borderRadius = {
   xl: 24,
   full: 9999,
 };
+
+// Touch target sizes for accessibility (WCAG 2.5.5)
+export const touchTargets = {
+  minimum: 48,      // Minimum touch target size (dp)
+  comfortable: 56,  // Comfortable touch target size (dp)
+  dense: 44,        // Dense UI minimum (iOS HIG)
+};
+
+// Common hit slop for small icons
+export const hitSlop = {
+  small: { top: 12, right: 12, bottom: 12, left: 12 },
+  medium: { top: 16, right: 16, bottom: 16, left: 16 },
+};
+
+// Animation constants for consistent motion design
+export const animation = {
+  // Durations (ms)
+  duration: {
+    instant: 100,
+    fast: 200,
+    normal: 300,
+    slow: 500,
+    verySlow: 800,
+  },
+  // Spring configs for react-native-reanimated
+  spring: {
+    snappy: {
+      damping: 20,
+      stiffness: 300,
+      mass: 1,
+    },
+    bouncy: {
+      damping: 10,
+      stiffness: 180,
+      mass: 1,
+    },
+    gentle: {
+      damping: 15,
+      stiffness: 100,
+      mass: 1,
+    },
+  },
+  // Timing configs
+  timing: {
+    easeIn: 'ease-in',
+    easeOut: 'ease-out',
+    easeInOut: 'ease-in-out',
+    linear: 'linear',
+  },
+  // Scale values for press feedback
+  scale: {
+    pressed: 0.97,
+    disabled: 1,
+    active: 1.02,
+  },
+  // Opacity values
+  opacity: {
+    disabled: 0.5,
+    pressed: 0.8,
+    active: 1,
+  },
+};
+
+// Glass/blur effect constants for iOS 18+ Liquid Glass
+export const glass = {
+  // Blur intensities for BlurView fallback
+  blur: {
+    light: 10,
+    medium: 20,
+    heavy: 40,
+  },
+  // Background opacity for glass surfaces
+  backgroundOpacity: {
+    subtle: 0.1,
+    medium: 0.2,
+    strong: 0.4,
+  },
+  // Border opacity for glass edges
+  borderOpacity: 0.15,
+  // Tint colors (applied over blur)
+  tint: {
+    dark: 'rgba(0, 0, 0, 0.3)',
+    light: 'rgba(255, 255, 255, 0.1)',
+    accent: 'rgba(201, 162, 39, 0.15)', // accent color with transparency
+  },
+};
