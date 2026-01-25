@@ -11,11 +11,12 @@ interface CompassDisplayProps {
 }
 
 export function CompassDisplay({ heading, windDirection, windSpeed, isLocked = false }: CompassDisplayProps) {
-  const size = 320;
+  const size = 340;
   const center = size / 2;
-  const outerRadius = 140;
-  const innerRadius = 50;
-  const tickRadius = 125;
+  const outerRadius = 120;
+  const innerRadius = 42;
+  const tickRadius = 105;
+  const cardinalRadius = 138;
   const ringColor = isLocked ? colors.primary : colors.border;
 
   const cardinalPoints = [
@@ -39,35 +40,44 @@ export function CompassDisplay({ heading, windDirection, windSpeed, isLocked = f
 
   const windAngle = windDirection - heading;
 
-  const windStart = getPoint(windAngle, outerRadius - 5);
-  const windEnd = getPoint(windAngle, innerRadius + 15);
+  const windStart = getPoint(windAngle, outerRadius - 8);
+  const windEnd = getPoint(windAngle, innerRadius + 12);
+  const windAngleRad = ((windAngle - 90) * Math.PI) / 180;
 
-  const arrowSize = 16;
-  const arrowAngle = ((windAngle - 90) * Math.PI) / 180;
-  const arrowTipX = windEnd.x;
-  const arrowTipY = windEnd.y;
-
-  const arrowLeft = {
-    x: arrowTipX + arrowSize * Math.cos(arrowAngle - Math.PI / 5),
-    y: arrowTipY + arrowSize * Math.sin(arrowAngle - Math.PI / 5),
+  const windArrowTip = windEnd;
+  const windArrowSize = 14;
+  const windArrowBack = 20;
+  const windArrowNotch = 8;
+  const windArrowLeft = {
+    x: windArrowTip.x + windArrowSize * Math.cos(windAngleRad - Math.PI / 4),
+    y: windArrowTip.y + windArrowSize * Math.sin(windAngleRad - Math.PI / 4),
   };
-  const arrowRight = {
-    x: arrowTipX + arrowSize * Math.cos(arrowAngle + Math.PI / 5),
-    y: arrowTipY + arrowSize * Math.sin(arrowAngle + Math.PI / 5),
+  const windArrowRight = {
+    x: windArrowTip.x + windArrowSize * Math.cos(windAngleRad + Math.PI / 4),
+    y: windArrowTip.y + windArrowSize * Math.sin(windAngleRad + Math.PI / 4),
+  };
+  const windArrowNotchPoint = {
+    x: windArrowTip.x + windArrowNotch * Math.cos(windAngleRad),
+    y: windArrowTip.y + windArrowNotch * Math.sin(windAngleRad),
   };
 
   const userHeadingAngle = 0;
-  const userArrowTip = getPoint(userHeadingAngle, outerRadius - 15);
-  const userArrowBase = getPoint(userHeadingAngle, innerRadius + 20);
-  const userArrowSize = 14;
-  const userArrowAngleRad = ((userHeadingAngle - 90) * Math.PI) / 180;
+  const userArrowTip = getPoint(userHeadingAngle, outerRadius - 12);
+  const userArrowBase = getPoint(userHeadingAngle, innerRadius + 12);
+  const userAngleRad = ((userHeadingAngle - 90) * Math.PI) / 180;
+  const userArrowSize = 12;
+  const userArrowNotch = 6;
   const userArrowLeft = {
-    x: userArrowTip.x - userArrowSize * Math.cos(userArrowAngleRad - Math.PI / 6),
-    y: userArrowTip.y - userArrowSize * Math.sin(userArrowAngleRad - Math.PI / 6),
+    x: userArrowTip.x - userArrowSize * Math.cos(userAngleRad - Math.PI / 4),
+    y: userArrowTip.y - userArrowSize * Math.sin(userAngleRad - Math.PI / 4),
   };
   const userArrowRight = {
-    x: userArrowTip.x - userArrowSize * Math.cos(userArrowAngleRad + Math.PI / 6),
-    y: userArrowTip.y - userArrowSize * Math.sin(userArrowAngleRad + Math.PI / 6),
+    x: userArrowTip.x - userArrowSize * Math.cos(userAngleRad + Math.PI / 4),
+    y: userArrowTip.y - userArrowSize * Math.sin(userAngleRad + Math.PI / 4),
+  };
+  const userArrowNotchPoint = {
+    x: userArrowTip.x - userArrowNotch * Math.cos(userAngleRad),
+    y: userArrowTip.y - userArrowNotch * Math.sin(userAngleRad),
   };
 
   const getTicks = () => {
@@ -99,16 +109,17 @@ export function CompassDisplay({ heading, windDirection, windSpeed, isLocked = f
 
   const getCardinalBackground = (angle: number, isCardinal: boolean) => {
     if (!isCardinal) return null;
-    const pos = getPoint(angle, outerRadius + 28);
+    const pos = getPoint(angle, cardinalRadius);
     return (
       <Circle
+        key={`bg-${angle}`}
         cx={pos.x}
         cy={pos.y}
-        r={16}
+        r={14}
         fill={colors.surfaceElevated}
         stroke={colors.border}
         strokeWidth={1}
-        opacity={0.8}
+        opacity={0.6}
       />
     );
   };
@@ -152,7 +163,7 @@ export function CompassDisplay({ heading, windDirection, windSpeed, isLocked = f
         {cardinalPoints.map((point) => getCardinalBackground(point.angle, point.cardinal))}
 
         {cardinalPoints.map((point) => {
-          const pos = getPoint(point.angle, outerRadius + 28);
+          const pos = getPoint(point.angle, cardinalRadius);
           const isNorth = point.label === 'N';
           const isCardinal = point.cardinal;
           return (
@@ -160,7 +171,7 @@ export function CompassDisplay({ heading, windDirection, windSpeed, isLocked = f
               key={point.label}
               x={pos.x}
               y={pos.y}
-              fontSize={isNorth ? 22 : isCardinal ? 16 : 12}
+              fontSize={isNorth ? 18 : isCardinal ? 14 : 11}
               fontWeight={isNorth ? '800' : isCardinal ? '700' : '500'}
               fill={isNorth ? colors.error : isCardinal ? colors.text : colors.textMuted}
               textAnchor="middle"
@@ -171,18 +182,6 @@ export function CompassDisplay({ heading, windDirection, windSpeed, isLocked = f
           );
         })}
 
-        <G opacity={0.15}>
-          <Line
-            x1={windStart.x}
-            y1={windStart.y}
-            x2={windEnd.x}
-            y2={windEnd.y}
-            stroke={colors.accent}
-            strokeWidth={16}
-            strokeLinecap="round"
-          />
-        </G>
-
         <G>
           <Line
             x1={windStart.x}
@@ -190,40 +189,28 @@ export function CompassDisplay({ heading, windDirection, windSpeed, isLocked = f
             x2={windEnd.x}
             y2={windEnd.y}
             stroke={colors.accent}
-            strokeWidth={7}
-            strokeLinecap="round"
+            strokeWidth={5}
+            strokeLinecap="butt"
           />
 
           <Polygon
-            points={`${arrowTipX},${arrowTipY} ${arrowLeft.x},${arrowLeft.y} ${arrowRight.x},${arrowRight.y}`}
+            points={`${windArrowTip.x},${windArrowTip.y} ${windArrowLeft.x},${windArrowLeft.y} ${windArrowNotchPoint.x},${windArrowNotchPoint.y} ${windArrowRight.x},${windArrowRight.y}`}
             fill={colors.accent}
-            stroke={colors.accent}
-            strokeWidth={2}
-            strokeLinejoin="round"
+            stroke={colors.background}
+            strokeWidth={1}
+            strokeLinejoin="miter"
           />
 
           <Circle
             cx={windStart.x}
             cy={windStart.y}
-            r={8}
+            r={6}
             fill={colors.accent}
             stroke={colors.background}
             strokeWidth={2}
           />
         </G>
 
-        <G opacity={0.2}>
-          <Line
-            x1={userArrowBase.x}
-            y1={userArrowBase.y}
-            x2={userArrowTip.x}
-            y2={userArrowTip.y}
-            stroke={colors.primary}
-            strokeWidth={10}
-            strokeLinecap="round"
-          />
-        </G>
-
         <G>
           <Line
             x1={userArrowBase.x}
@@ -231,16 +218,16 @@ export function CompassDisplay({ heading, windDirection, windSpeed, isLocked = f
             x2={userArrowTip.x}
             y2={userArrowTip.y}
             stroke={colors.primary}
-            strokeWidth={5}
-            strokeLinecap="round"
+            strokeWidth={4}
+            strokeLinecap="butt"
           />
 
           <Polygon
-            points={`${userArrowTip.x},${userArrowTip.y} ${userArrowLeft.x},${userArrowLeft.y} ${userArrowRight.x},${userArrowRight.y}`}
+            points={`${userArrowTip.x},${userArrowTip.y} ${userArrowLeft.x},${userArrowLeft.y} ${userArrowNotchPoint.x},${userArrowNotchPoint.y} ${userArrowRight.x},${userArrowRight.y}`}
             fill={colors.primary}
-            stroke={colors.primary}
-            strokeWidth={2}
-            strokeLinejoin="round"
+            stroke={colors.background}
+            strokeWidth={1}
+            strokeLinejoin="miter"
           />
         </G>
 
@@ -255,8 +242,8 @@ export function CompassDisplay({ heading, windDirection, windSpeed, isLocked = f
 
         <SvgText
           x={center}
-          y={center - 8}
-          fontSize={22}
+          y={center - 6}
+          fontSize={18}
           fontWeight="700"
           fill={colors.accent}
           textAnchor="middle"
@@ -266,8 +253,8 @@ export function CompassDisplay({ heading, windDirection, windSpeed, isLocked = f
         </SvgText>
         <SvgText
           x={center}
-          y={center + 14}
-          fontSize={10}
+          y={center + 10}
+          fontSize={9}
           fontWeight="600"
           fill={colors.textSecondary}
           textAnchor="middle"
