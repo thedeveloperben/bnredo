@@ -54,26 +54,29 @@ export function CompassDisplay({ heading, windDirection, windSpeed, isLocked = f
     };
   };
 
-  const windAngle = windDirection;
+  // Wind angle relative to user's heading
+  // If user faces North (0°) and wind from East (90°), wind arrow at 90° (right side)
+  // If user faces East (90°) and wind from East (90°), wind arrow at 0° (top) = headwind
+  const relativeWindAngle = ((windDirection - heading) + 360) % 360;
 
-  const windStart = getPoint(windAngle, outerRadius - 8);
-  const windEnd = getPoint(windAngle, innerRadius + 12);
-  const windAngleRad = ((windAngle - 90) * Math.PI) / 180;
+  const windStart = getPoint(relativeWindAngle, outerRadius - 8);
+  const windEnd = getPoint(relativeWindAngle, innerRadius + 12);
+  const relativeWindAngleRad = ((relativeWindAngle - 90) * Math.PI) / 180;
 
   const windArrowTip = windEnd;
   const windArrowSize = 14;
   const windArrowNotch = 8;
   const windArrowLeft = {
-    x: windArrowTip.x + windArrowSize * Math.cos(windAngleRad - Math.PI / 4),
-    y: windArrowTip.y + windArrowSize * Math.sin(windAngleRad - Math.PI / 4),
+    x: windArrowTip.x + windArrowSize * Math.cos(relativeWindAngleRad - Math.PI / 4),
+    y: windArrowTip.y + windArrowSize * Math.sin(relativeWindAngleRad - Math.PI / 4),
   };
   const windArrowRight = {
-    x: windArrowTip.x + windArrowSize * Math.cos(windAngleRad + Math.PI / 4),
-    y: windArrowTip.y + windArrowSize * Math.sin(windAngleRad + Math.PI / 4),
+    x: windArrowTip.x + windArrowSize * Math.cos(relativeWindAngleRad + Math.PI / 4),
+    y: windArrowTip.y + windArrowSize * Math.sin(relativeWindAngleRad + Math.PI / 4),
   };
   const windArrowNotchPoint = {
-    x: windArrowTip.x + windArrowNotch * Math.cos(windAngleRad),
-    y: windArrowTip.y + windArrowNotch * Math.sin(windAngleRad),
+    x: windArrowTip.x + windArrowNotch * Math.cos(relativeWindAngleRad),
+    y: windArrowTip.y + windArrowNotch * Math.sin(relativeWindAngleRad),
   };
 
   const userHeadingAngle = 0;
@@ -179,7 +182,8 @@ export function CompassDisplay({ heading, windDirection, windSpeed, isLocked = f
           opacity={0.95}
         />
 
-        <G rotation={reduceMotion ? 0 : -heading} origin={`${center}, ${center}`}>
+        {/* Compass face is fixed - user heading arrow at top, wind shows relative direction */}
+        <G>
           {getTicks()}
 
           {cardinalPoints.map((point) => getCardinalBackground(point.angle, point.cardinal))}
