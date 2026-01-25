@@ -182,8 +182,8 @@ export function CompassDisplay({ heading, windDirection, windSpeed, isLocked = f
           opacity={0.95}
         />
 
-        {/* Compass face is fixed - user heading arrow at top, wind shows relative direction */}
-        <G>
+        {/* Compass face rotates with heading - NW wind anchors at NW cardinal */}
+        <G rotation={-heading} origin={`${center}, ${center}`}>
           {getTicks()}
 
           {cardinalPoints.map((point) => getCardinalBackground(point.angle, point.cardinal))}

@@ -95,23 +95,23 @@ describe('CompassDisplay', () => {
       });
     });
 
-    it('describes wind effect as headwind when wind from front', async () => {
-      // Wind from 180, heading 0 = headwind (opposing)
+    it('describes wind effect as tailwind when wind from behind', async () => {
+      // Wind from 180, heading 0 = tailwind (wind coming from behind player)
       render(<CompassDisplay heading={0} windDirection={180} windSpeed={10} />);
 
       await waitFor(() => {
         const compass = screen.getByRole('image');
-        expect(compass.props.accessibilityLabel).toContain('opposing wind from front');
+        expect(compass.props.accessibilityLabel).toContain('helping wind from behind');
       });
     });
 
-    it('describes wind effect as tailwind when wind from behind', async () => {
-      // Wind from 0, heading 0 = tailwind (helping)
+    it('describes wind effect as headwind when wind from front', async () => {
+      // Wind from 0, heading 0 = headwind (wind coming from direction player faces)
       render(<CompassDisplay heading={0} windDirection={0} windSpeed={10} />);
 
       await waitFor(() => {
         const compass = screen.getByRole('image');
-        expect(compass.props.accessibilityLabel).toContain('helping wind from behind');
+        expect(compass.props.accessibilityLabel).toContain('opposing wind from front');
       });
     });
 

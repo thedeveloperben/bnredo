@@ -2,8 +2,8 @@
  * Wind color utilities for dynamic wind arrow coloring
  *
  * Wind effect zones (relative to player heading):
- * - Tailwind (315-45°): Green - wind helping (from behind)
- * - Headwind (135-225°): Red - wind hurting (from front)
+ * - Headwind (315-45°): Red - wind hurting (from front)
+ * - Tailwind (135-225°): Green - wind helping (from behind)
  * - Crosswind (45-135° or 225-315°): Yellow - caution
  */
 
@@ -37,11 +37,11 @@ export function normalizeAngle(angle: number): number {
  *
  * @param windDirection - Absolute wind direction (0-360, where wind is coming FROM)
  * @param playerHeading - Player's facing direction (0-360)
- * @returns Relative angle 0-360 (0 = wind from behind, 180 = wind from front)
+ * @returns Relative angle 0-360 (0 = headwind from front, 180 = tailwind from behind)
  */
 export function getRelativeWindAngle(windDirection: number, playerHeading: number): number {
   // Wind direction is where wind comes FROM
-  // Relative angle: 0 = tailwind (from behind), 180 = headwind (from front)
+  // Relative angle: 0 = headwind (from front), 180 = tailwind (from behind)
   const relative = normalizeAngle(windDirection - playerHeading);
   return relative;
 }
@@ -55,14 +55,14 @@ export function getRelativeWindAngle(windDirection: number, playerHeading: numbe
 export function getWindEffect(relativeAngle: number): WindEffect {
   const angle = normalizeAngle(relativeAngle);
 
-  // Tailwind: 315-360 or 0-45 (wind from behind)
+  // Headwind: 315-360 or 0-45 (wind coming from the direction player faces)
   if (angle >= 315 || angle < 45) {
-    return 'tailwind';
+    return 'headwind';
   }
 
-  // Headwind: 135-225 (wind from front)
+  // Tailwind: 135-225 (wind coming from behind player)
   if (angle >= 135 && angle < 225) {
-    return 'headwind';
+    return 'tailwind';
   }
 
   // Crosswind: 45-135 or 225-315 (wind from sides)
