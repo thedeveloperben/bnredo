@@ -3,7 +3,9 @@ import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Circle, Line, Polygon, G, Text as SvgText, Defs, RadialGradient, Stop } from 'react-native-svg';
 import { colors } from '@/src/constants/theme';
 import { useReduceMotion } from '@/src/hooks/useReduceMotion';
+import { useUserPreferences } from '@/src/contexts/UserPreferencesContext';
 import { getWindColor, getWindEffectDescription } from '@/src/features/wind/utils/wind-colors';
+import { formatWindSpeed } from '@/src/utils/unit-conversions';
 
 interface CompassDisplayProps {
   heading: number;
@@ -13,10 +15,14 @@ interface CompassDisplayProps {
   reduceMotion?: boolean;
 }
 
-export function CompassDisplay({ heading, windDirection, windSpeed, isLocked = false, reduceMotion: reduceMotionProp }: CompassDisplayProps) {
+export const CompassDisplay = React.memo(function CompassDisplay({ heading, windDirection, windSpeed, isLocked = false, reduceMotion: reduceMotionProp }: CompassDisplayProps) {
   // Reduce motion preference - use prop if provided, otherwise use hook
   const systemReduceMotion = useReduceMotion();
   const reduceMotion = reduceMotionProp ?? systemReduceMotion;
+  const { preferences } = useUserPreferences();
+
+  // Format wind speed based on user preferences
+  const windFormat = formatWindSpeed(windSpeed, preferences.windSpeedUnit);
 
   // Get dynamic wind color based on wind direction relative to heading
   const windColorResult = getWindColor(windDirection, heading, windSpeed);
@@ -25,7 +31,7 @@ export function CompassDisplay({ heading, windDirection, windSpeed, isLocked = f
 
   // Accessibility description with wind effect
   const windEffectDesc = getWindEffectDescription(windColorResult.effect);
-  const accessibilityDescription = `Compass showing ${Math.round(heading)} degrees heading. Wind ${Math.round(windSpeed)} miles per hour, ${windEffectDesc}. ${isLocked ? 'Target locked.' : 'Facing direction.'}`;
+  const accessibilityDescription = `Compass showing ${Math.round(heading)} degrees heading. Wind ${windFormat.value} ${windFormat.label}, ${windEffectDesc}. ${isLocked ? 'Target locked.' : 'Facing direction.'}`;
 
   const size = 340;
   const center = size / 2;
@@ -197,9 +203,9 @@ export function CompassDisplay({ heading, windDirection, windSpeed, isLocked = f
                 key={point.label}
                 x={pos.x}
                 y={pos.y}
-                fontSize={isNorth ? 18 : isCardinal ? 14 : 11}
+                fontSize={isNorth ? 18 : isCardinal ? 14 : 14}
                 fontWeight={isNorth ? '800' : isCardinal ? '700' : '500'}
-                fill={isNorth ? colors.error : isCardinal ? colors.text : colors.textMuted}
+                fill={isNorth ? colors.error : isCardinal ? colors.text : colors.textSecondary}
                 textAnchor="middle"
                 alignmentBaseline="middle"
               >
@@ -277,7 +283,7 @@ export function CompassDisplay({ heading, windDirection, windSpeed, isLocked = f
           alignmentBaseline="middle"
           opacity={windArrowOpacity}
         >
-          {Math.round(windSpeed)}
+          {windFormat.value}
         </SvgText>
         <SvgText
           x={center}
@@ -288,7 +294,7 @@ export function CompassDisplay({ heading, windDirection, windSpeed, isLocked = f
           textAnchor="middle"
           alignmentBaseline="middle"
         >
-          MPH
+          {windFormat.shortLabel.toUpperCase()}
         </SvgText>
       </Svg>
 
@@ -328,7 +334,7 @@ export function CompassDisplay({ heading, windDirection, windSpeed, isLocked = f
       </View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {

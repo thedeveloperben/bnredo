@@ -7,14 +7,18 @@ import {
   TouchableOpacity,
   ScrollView,
   Platform,
+  AccessibilityInfo,
+  findNodeHandle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, Wind, AlertTriangle, ArrowLeft, ArrowRight, RotateCcw } from 'lucide-react-native';
 import { colors, spacing, borderRadius, typography, hitSlop } from '@/src/constants/theme';
 import { useWeather } from '@/src/contexts/WeatherContext';
 import { useClubBag } from '@/src/contexts/ClubBagContext';
+import { useUserPreferences } from '@/src/contexts/UserPreferencesContext';
 import { calculateWindEffect } from '@/src/core/services/wind-calculator';
 import { EnvironmentalCalculator } from '@/src/core/services/environmental-calculations';
+import { formatDistance, formatWindSpeed } from '@/src/utils/unit-conversions';
 
 interface WindResultsModalProps {
   visible: boolean;
@@ -40,6 +44,13 @@ export function WindResultsModal({
   const insets = useSafeAreaInsets();
   const { weather } = useWeather();
   const { getRecommendedClub } = useClubBag();
+  const { preferences } = useUserPreferences();
+  const firstResultRef = React.useRef<View>(null);
+
+  // Format values based on user preferences
+  const targetFormat = formatDistance(targetYardage, preferences.distanceUnit);
+  const windSpeedFormat = weather ? formatWindSpeed(weather.windSpeed, preferences.windSpeedUnit) : null;
+  const gustSpeedFormat = weather ? formatWindSpeed(weather.windGust, preferences.windSpeedUnit) : null;
 
   const calculations = React.useMemo(() => {
     if (!weather || !visible) return null;
@@ -109,8 +120,18 @@ export function WindResultsModal({
 
   const getAimDirection = (offset: number): string => {
     if (Math.abs(offset) < 1) return 'On target';
-    return offset > 0 ? `Aim ${Math.abs(offset)} yds RIGHT` : `Aim ${Math.abs(offset)} yds LEFT`;
+    const dist = formatDistance(Math.abs(offset), preferences.distanceUnit);
+    return offset > 0 ? `Aim ${dist.value} ${dist.shortLabel} RIGHT` : `Aim ${dist.value} ${dist.shortLabel} LEFT`;
   };
+
+  React.useEffect(() => {
+    if (visible && firstResultRef.current) {
+      const reactTag = findNodeHandle(firstResultRef.current);
+      if (reactTag) {
+        AccessibilityInfo.setAccessibilityFocus(reactTag);
+      }
+    }
+  }, [visible]);
 
   if (!calculations) return null;
 
@@ -149,25 +170,26 @@ export function WindResultsModal({
         >
           <View style={styles.targetInfo}>
             <Text style={styles.targetLabel}>Target Distance</Text>
-            <Text style={styles.targetValue}>{targetYardage} yards</Text>
+            <Text style={styles.targetValue}>{targetFormat.value} {targetFormat.label}</Text>
           </View>
 
           <View
+            ref={firstResultRef}
             style={styles.scenarioCard}
             accessible
-            accessibilityLabel={`Sustained wind at ${weather?.windSpeed} miles per hour. Plays like ${calculations.sustained.adjustedYardage} yards. ${getAimDirection(calculations.sustained.lateralOffset)}. ${calculations.sustained.recommendedClub ? `Recommended club: ${calculations.sustained.recommendedClub}` : ''}`}
+            accessibilityLabel={`Sustained wind at ${windSpeedFormat?.value} ${windSpeedFormat?.label}. Plays like ${formatDistance(calculations.sustained.adjustedYardage, preferences.distanceUnit).value} ${formatDistance(calculations.sustained.adjustedYardage, preferences.distanceUnit).label}. ${getAimDirection(calculations.sustained.lateralOffset)}. ${calculations.sustained.recommendedClub ? `Recommended club: ${calculations.sustained.recommendedClub}` : ''}`}
           >
             <View style={styles.scenarioHeader}>
               <Wind color={colors.primary} size={20} />
               <Text style={styles.scenarioTitle}>Sustained Wind</Text>
-              <Text style={styles.windSpeed}>{weather?.windSpeed} mph</Text>
+              <Text style={styles.windSpeed}>{windSpeedFormat?.value} {windSpeedFormat?.shortLabel}</Text>
             </View>
 
             <View style={styles.mainResult}>
               <Text style={styles.playsLikeLabel}>Plays Like</Text>
               <Text style={styles.playsLikeValue}>
-                {calculations.sustained.adjustedYardage}
-                <Text style={styles.playsLikeUnit}> yds</Text>
+                {formatDistance(calculations.sustained.adjustedYardage, preferences.distanceUnit).value}
+                <Text style={styles.playsLikeUnit}> {formatDistance(calculations.sustained.adjustedYardage, preferences.distanceUnit).shortLabel}</Text>
               </Text>
             </View>
 
@@ -195,21 +217,21 @@ export function WindResultsModal({
           <View
             style={[styles.scenarioCard, styles.gustCard]}
             accessible
-            accessibilityLabel={`With gusts at ${weather?.windGust} miles per hour. Plays like ${calculations.gust.adjustedYardage} yards. ${getAimDirection(calculations.gust.lateralOffset)}. ${calculations.gust.recommendedClub ? `Recommended club: ${calculations.gust.recommendedClub}` : ''}`}
+            accessibilityLabel={`With gusts at ${gustSpeedFormat?.value} ${gustSpeedFormat?.label}. Plays like ${formatDistance(calculations.gust.adjustedYardage, preferences.distanceUnit).value} ${formatDistance(calculations.gust.adjustedYardage, preferences.distanceUnit).label}. ${getAimDirection(calculations.gust.lateralOffset)}. ${calculations.gust.recommendedClub ? `Recommended club: ${calculations.gust.recommendedClub}` : ''}`}
           >
             <View style={styles.scenarioHeader}>
               <AlertTriangle color={colors.warning} size={20} />
               <Text style={styles.scenarioTitle}>With Gusts</Text>
               <Text style={[styles.windSpeed, { color: colors.warning }]}>
-                {weather?.windGust} mph
+                {gustSpeedFormat?.value} {gustSpeedFormat?.shortLabel}
               </Text>
             </View>
 
             <View style={styles.mainResult}>
               <Text style={styles.playsLikeLabel}>Plays Like</Text>
               <Text style={[styles.playsLikeValue, { color: colors.warning }]}>
-                {calculations.gust.adjustedYardage}
-                <Text style={styles.playsLikeUnit}> yds</Text>
+                {formatDistance(calculations.gust.adjustedYardage, preferences.distanceUnit).value}
+                <Text style={styles.playsLikeUnit}> {formatDistance(calculations.gust.adjustedYardage, preferences.distanceUnit).shortLabel}</Text>
               </Text>
             </View>
 
@@ -240,21 +262,27 @@ export function WindResultsModal({
               <Text style={styles.breakdownLabel}>Environmental</Text>
               <Text style={styles.breakdownValue}>
                 {calculations.sustained.environmentalEffect > 0 ? '+' : ''}
-                {calculations.sustained.environmentalEffect.toFixed(1)} yds
+                {preferences.distanceUnit === 'meters'
+                  ? (calculations.sustained.environmentalEffect * 0.9144).toFixed(1)
+                  : calculations.sustained.environmentalEffect.toFixed(1)} {preferences.distanceUnit === 'meters' ? 'm' : 'yds'}
               </Text>
             </View>
             <View style={styles.breakdownRow}>
               <Text style={styles.breakdownLabel}>Wind (sustained)</Text>
               <Text style={styles.breakdownValue}>
                 {calculations.sustained.windEffect > 0 ? '+' : ''}
-                {calculations.sustained.windEffect.toFixed(1)} yds
+                {preferences.distanceUnit === 'meters'
+                  ? (calculations.sustained.windEffect * 0.9144).toFixed(1)
+                  : calculations.sustained.windEffect.toFixed(1)} {preferences.distanceUnit === 'meters' ? 'm' : 'yds'}
               </Text>
             </View>
             <View style={styles.breakdownRow}>
               <Text style={styles.breakdownLabel}>Wind (gusts)</Text>
               <Text style={[styles.breakdownValue, { color: colors.warning }]}>
                 {calculations.gust.windEffect > 0 ? '+' : ''}
-                {calculations.gust.windEffect.toFixed(1)} yds
+                {preferences.distanceUnit === 'meters'
+                  ? (calculations.gust.windEffect * 0.9144).toFixed(1)
+                  : calculations.gust.windEffect.toFixed(1)} {preferences.distanceUnit === 'meters' ? 'm' : 'yds'}
               </Text>
             </View>
           </View>

@@ -3,11 +3,19 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'rea
 import { MapPin, RefreshCw, Thermometer, Droplets, Wind, Gauge } from 'lucide-react-native';
 import { colors, spacing, borderRadius, hitSlop } from '@/src/constants/theme';
 import { useWeather } from '@/src/contexts/WeatherContext';
+import { useUserPreferences } from '@/src/contexts/UserPreferencesContext';
 import { getWindDirectionLabel } from '@/src/services/weather-service';
+import { formatTemperature, formatWindSpeed, formatAltitude } from '@/src/utils/unit-conversions';
 
-export function WeatherCard() {
+export const WeatherCard = React.memo(function WeatherCard() {
   const { weather, isLoading, error, isOffline, refreshWeather } = useWeather();
+  const { preferences } = useUserPreferences();
   const [isRefreshing, setIsRefreshing] = React.useState(false);
+
+  // Format values based on user preferences
+  const tempFormat = weather ? formatTemperature(weather.temperature, preferences.temperatureUnit) : null;
+  const windFormat = weather ? formatWindSpeed(weather.windSpeed, preferences.windSpeedUnit) : null;
+  const altFormat = weather ? formatAltitude(weather.altitude, preferences.distanceUnit) : null;
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -80,9 +88,9 @@ export function WeatherCard() {
       </View>
 
       <View style={styles.grid} accessibilityRole="summary">
-        <View style={styles.gridItem} accessible accessibilityLabel={`Temperature: ${weather.temperature} degrees Fahrenheit`}>
+        <View style={styles.gridItem} accessible accessibilityLabel={`Temperature: ${tempFormat?.value} ${tempFormat?.label}`}>
           <Thermometer color={colors.accent} size={18} />
-          <Text style={styles.gridValue}>{weather.temperature}°F</Text>
+          <Text style={styles.gridValue}>{tempFormat?.value}{tempFormat?.shortLabel}</Text>
           <Text style={styles.gridLabel}>Temp</Text>
         </View>
         <View style={styles.gridItem} accessible accessibilityLabel={`Humidity: ${weather.humidity} percent`}>
@@ -90,18 +98,18 @@ export function WeatherCard() {
           <Text style={styles.gridValue}>{weather.humidity}%</Text>
           <Text style={styles.gridLabel}>Humidity</Text>
         </View>
-        <View style={styles.gridItem} accessible accessibilityLabel={`Wind: ${weather.windSpeed} miles per hour from ${getWindDirectionLabel(weather.windDirection)}`}>
+        <View style={styles.gridItem} accessible accessibilityLabel={`Wind: ${windFormat?.value} ${windFormat?.label} from ${getWindDirectionLabel(weather.windDirection)}`}>
           <Wind color={colors.textSecondary} size={18} />
           <Text style={styles.gridValue}>
-            {weather.windSpeed}
-            <Text style={styles.gridUnit}> mph</Text>
+            {windFormat?.value}
+            <Text style={styles.gridUnit}> {windFormat?.shortLabel}</Text>
           </Text>
           <Text style={styles.gridLabel}>{getWindDirectionLabel(weather.windDirection)}</Text>
         </View>
-        <View style={styles.gridItem} accessible accessibilityLabel={`Altitude: ${weather.altitude} feet`}>
+        <View style={styles.gridItem} accessible accessibilityLabel={`Altitude: ${altFormat?.value} ${altFormat?.label}`}>
           <Gauge color={colors.textSecondary} size={18} />
-          <Text style={styles.gridValue}>{weather.altitude}</Text>
-          <Text style={styles.gridLabel}>Alt (ft)</Text>
+          <Text style={styles.gridValue}>{altFormat?.value}</Text>
+          <Text style={styles.gridLabel}>Alt ({altFormat?.shortLabel})</Text>
         </View>
       </View>
 
@@ -110,7 +118,7 @@ export function WeatherCard() {
       )}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -175,7 +183,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    padding: spacing.xs,
+    padding: spacing.sm,
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: borderRadius.sm,
   },
   refreshText: {
     color: colors.primary,

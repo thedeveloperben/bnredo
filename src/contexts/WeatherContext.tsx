@@ -171,12 +171,12 @@ export function WeatherProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const refreshWeather = async () => {
+  const refreshWeather = React.useCallback(async () => {
     await AsyncStorage.removeItem(MANUAL_OVERRIDE_KEY);
     await loadWeather();
-  };
+  }, []);
 
-  const updateManualWeather = async (updates: Partial<WeatherData>) => {
+  const updateManualWeather = React.useCallback(async (updates: Partial<WeatherData>) => {
     const newWeather: WeatherData = {
       ...(weather || getDefaultWeather()),
       ...updates,
@@ -185,7 +185,7 @@ export function WeatherProvider({ children }: { children: React.ReactNode }) {
     };
     setWeather(newWeather);
     await AsyncStorage.setItem(MANUAL_OVERRIDE_KEY, JSON.stringify(newWeather));
-  };
+  }, [weather]);
 
   const value = React.useMemo(() => ({
     weather,
@@ -194,7 +194,7 @@ export function WeatherProvider({ children }: { children: React.ReactNode }) {
     isOffline,
     refreshWeather,
     updateManualWeather,
-  }), [weather, isLoading, error, isOffline]);
+  }), [weather, isLoading, error, isOffline, refreshWeather, updateManualWeather]);
 
   return (
     <WeatherContext.Provider value={value}>

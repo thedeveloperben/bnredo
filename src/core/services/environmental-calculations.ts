@@ -74,6 +74,12 @@ export class EnvironmentalCalculator {
     return { distanceAdjustment, trajectoryShift, spinAdjustment, launchAngleAdjustment };
   }
 
+  /**
+   * @deprecated Use air density from station pressure instead.
+   * Station pressure already incorporates altitude effects.
+   * This function causes double-counting when combined with density calculations.
+   * Only use if pressure input is MSL (sea-level) pressure, not station pressure.
+   */
   static calculateAltitudeEffect(altitude: number): number {
     return (altitude / 1000) * 2;
   }
@@ -115,13 +121,11 @@ export class EnvironmentalCalculator {
 
   static getEnvironmentalSummary(conditions: EnvironmentalConditions): string {
     const adjustments = this.calculateShotAdjustments(conditions);
-    const altitudeEffect = this.calculateAltitudeEffect(conditions.altitude);
 
     return `
       Playing conditions will affect your shots as follows:
-      • Distance: ${adjustments.distanceAdjustment > 0 ? 'Increase' : 'Decrease'} by ${Math.abs(adjustments.distanceAdjustment).toFixed(1)}%
+      • Distance: ${adjustments.distanceAdjustment > 0 ? 'Increase' : 'Decrease'} by ${Math.abs(adjustments.distanceAdjustment).toFixed(1)}% (includes altitude effect)
       • Ball flight: ${Math.abs(adjustments.trajectoryShift).toFixed(1)} yards ${adjustments.trajectoryShift > 0 ? 'right' : 'left'}
-      • Altitude effect: +${altitudeEffect.toFixed(1)}% carry distance
       • Spin rate: ${adjustments.spinAdjustment > 0 ? 'Increased' : 'Decreased'} effect
     `.trim();
   }

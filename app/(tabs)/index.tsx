@@ -13,13 +13,16 @@ import { colors, spacing, borderRadius, typography, touchTargets } from '@/src/c
 import { WeatherCard } from '@/src/components/WeatherCard';
 import { useWeather } from '@/src/contexts/WeatherContext';
 import { useClubBag } from '@/src/contexts/ClubBagContext';
+import { useUserPreferences } from '@/src/contexts/UserPreferencesContext';
 import { EnvironmentalCalculator } from '@/src/core/services/environmental-calculations';
 import { useHapticSlider } from '@/src/hooks/useHapticSlider';
+import { formatDistance } from '@/src/utils/unit-conversions';
 
 export default function ShotScreen() {
   const insets = useSafeAreaInsets();
   const { weather } = useWeather();
   const { getRecommendedClub } = useClubBag();
+  const { preferences } = useUserPreferences();
 
   const [targetYardage, setTargetYardage] = React.useState(150);
   const [showBreakdown, setShowBreakdown] = React.useState(false);
@@ -46,15 +49,14 @@ export default function ShotScreen() {
     };
 
     const adjustments = EnvironmentalCalculator.calculateShotAdjustments(conditions);
-    const altitudeEffect = EnvironmentalCalculator.calculateAltitudeEffect(weather.altitude);
 
-    const totalAdjustmentPercent = adjustments.distanceAdjustment + altitudeEffect;
+    // Altitude effect is already included in air density (station pressure reflects elevation)
+    const totalAdjustmentPercent = adjustments.distanceAdjustment;
     const adjustedYardage = Math.round(targetYardage * (1 - totalAdjustmentPercent / 100));
 
     return {
       adjustedYardage,
       adjustments,
-      altitudeEffect,
       totalAdjustmentPercent,
     };
   }, [weather, targetYardage]);
@@ -63,6 +65,11 @@ export default function ShotScreen() {
     if (!calculations) return null;
     return getRecommendedClub(calculations.adjustedYardage);
   }, [calculations, getRecommendedClub]);
+
+  // Format distances based on user preferences
+  const targetFormat = formatDistance(targetYardage, preferences.distanceUnit);
+  const adjustedFormat = calculations ? formatDistance(calculations.adjustedYardage, preferences.distanceUnit) : null;
+  const clubDistanceFormat = recommendedClub ? formatDistance(recommendedClub.customDistance, preferences.distanceUnit) : null;
 
   const handleIncrement = (amount: number) => {
     setTargetYardage(prev => Math.min(350, Math.max(50, prev + amount)));
@@ -83,8 +90,8 @@ export default function ShotScreen() {
           <Text style={styles.sectionLabel}>Target Distance</Text>
 
           <View style={styles.yardageDisplay}>
-            <Text style={styles.yardageValue}>{targetYardage}</Text>
-            <Text style={styles.yardageUnit}>yards</Text>
+            <Text style={styles.yardageValue}>{targetFormat.value}</Text>
+            <Text style={styles.yardageUnit}>{targetFormat.label}</Text>
           </View>
 
           <View style={styles.sliderContainer}>
@@ -102,13 +109,13 @@ export default function ShotScreen() {
               minimumTrackTintColor={colors.primary}
               maximumTrackTintColor={colors.border}
               thumbTintColor={colors.primary}
-              accessibilityLabel={`Target distance: ${targetYardage} yards`}
+              accessibilityLabel={`Target distance: ${targetFormat.value} ${targetFormat.label}`}
               accessibilityRole="adjustable"
               accessibilityValue={{
                 min: 50,
                 max: 350,
                 now: targetYardage,
-                text: `${targetYardage} yards`,
+                text: `${targetFormat.value} ${targetFormat.label}`,
               }}
             />
             <View style={styles.sliderLabels}>
@@ -165,8 +172,8 @@ export default function ShotScreen() {
           <View style={styles.resultSection}>
             <Text style={styles.playsLikeLabel}>Plays Like</Text>
             <Text style={styles.playsLikeValue}>
-              {calculations.adjustedYardage}
-              <Text style={styles.playsLikeUnit}> yards</Text>
+              {adjustedFormat?.value}
+              <Text style={styles.playsLikeUnit}> {adjustedFormat?.label}</Text>
             </Text>
 
             {recommendedClub && (
@@ -174,7 +181,7 @@ export default function ShotScreen() {
                 <Text style={styles.clubLabel}>Recommended Club</Text>
                 <Text style={styles.clubName}>{recommendedClub.name}</Text>
                 <Text style={styles.clubDistance}>
-                  ({recommendedClub.customDistance} yard club)
+                  ({clubDistanceFormat?.value} {clubDistanceFormat?.shortLabel} club)
                 </Text>
               </View>
             )}
@@ -200,21 +207,11 @@ export default function ShotScreen() {
             {showBreakdown && (
               <View style={styles.breakdown}>
                 <View style={styles.breakdownRow}>
-                  <Text style={styles.breakdownLabel}>Air Density Effect</Text>
-                  <Text style={styles.breakdownValue}>
-                    {calculations.adjustments.distanceAdjustment > 0 ? '+' : ''}
-                    {calculations.adjustments.distanceAdjustment.toFixed(1)}%
+                  <Text style={styles.breakdownLabel}>Environmental Effect</Text>
+                  <Text style={styles.breakdownSubtext}>
+                    (includes air density and altitude)
                   </Text>
-                </View>
-                <View style={styles.breakdownRow}>
-                  <Text style={styles.breakdownLabel}>Altitude Effect</Text>
                   <Text style={styles.breakdownValue}>
-                    +{calculations.altitudeEffect.toFixed(1)}%
-                  </Text>
-                </View>
-                <View style={[styles.breakdownRow, styles.breakdownTotal]}>
-                  <Text style={styles.breakdownTotalLabel}>Total Adjustment</Text>
-                  <Text style={styles.breakdownTotalValue}>
                     {calculations.totalAdjustmentPercent > 0 ? '+' : ''}
                     {calculations.totalAdjustmentPercent.toFixed(1)}%
                   </Text>
@@ -302,7 +299,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.surfaceElevated,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.md,
     borderRadius: borderRadius.md,
     gap: 4,
     minWidth: 64,
@@ -387,6 +384,12 @@ const styles = StyleSheet.create({
   breakdownLabel: {
     color: colors.textSecondary,
     fontSize: 14,
+  },
+  breakdownSubtext: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontStyle: 'italic',
+    marginTop: 2,
   },
   breakdownValue: {
     color: colors.text,

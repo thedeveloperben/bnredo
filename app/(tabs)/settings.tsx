@@ -15,7 +15,8 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronRight, Crown, Check } from 'lucide-react-native';
+import { ChevronRight, Crown, Check, Cloud, AlertCircle } from 'lucide-react-native';
+import { getProviderStatus } from '@/src/services/weather';
 import { colors, spacing, borderRadius, typography, touchTargets, animation } from '@/src/constants/theme';
 import { AnimatedCollapsible } from '@/src/components/ui';
 import { useReduceMotion } from '@/src/hooks/useReduceMotion';
@@ -125,29 +126,33 @@ export default function SettingsScreen() {
                 </Text>
               </View>
             </View>
-            <TouchableOpacity
-              style={[
-                styles.premiumToggle,
-                preferences.isPremium && styles.premiumToggleActive,
-              ]}
-              onPress={() => updatePreferences({ isPremium: !preferences.isPremium })}
-              accessibilityRole="button"
-              accessibilityLabel={preferences.isPremium ? 'Downgrade to free plan' : 'Upgrade to premium'}
-              accessibilityState={{ selected: preferences.isPremium }}
-            >
-              <Text
+            {__DEV__ && (
+              <TouchableOpacity
                 style={[
-                  styles.premiumToggleText,
-                  preferences.isPremium
-                    ? styles.premiumToggleTextActive
-                    : styles.premiumToggleTextInactive,
+                  styles.premiumToggle,
+                  preferences.isPremium && styles.premiumToggleActive,
                 ]}
+                onPress={() => updatePreferences({ isPremium: !preferences.isPremium })}
+                accessibilityRole="button"
+                accessibilityLabel={preferences.isPremium ? 'Downgrade to free plan' : 'Upgrade to premium'}
+                accessibilityState={{ selected: preferences.isPremium }}
               >
-                {preferences.isPremium ? 'Downgrade' : 'Upgrade'}
-              </Text>
-            </TouchableOpacity>
+                <Text
+                  style={[
+                    styles.premiumToggleText,
+                    preferences.isPremium
+                      ? styles.premiumToggleTextActive
+                      : styles.premiumToggleTextInactive,
+                  ]}
+                >
+                  {preferences.isPremium ? 'Downgrade' : 'Upgrade'}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
-          <Text style={styles.devNote}>(Dev toggle for testing)</Text>
+          {__DEV__ && (
+            <Text style={styles.devNote}>(Dev toggle for testing)</Text>
+          )}
         </View>
 
         <View style={styles.section}>
@@ -199,6 +204,69 @@ export default function SettingsScreen() {
           <Text style={styles.hint}>
             Affects lock button placement in Wind Calculator
           </Text>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Weather Data</Text>
+
+          <View style={styles.optionRow}>
+            <View style={styles.weatherProviderInfo}>
+              <Cloud color={colors.textSecondary} size={18} />
+              <Text style={styles.optionLabel}>Use Backup Provider</Text>
+            </View>
+            <Switch
+              value={preferences.weatherProvider?.enableMultiProvider ?? false}
+              onValueChange={(value) => updatePreferences({
+                weatherProvider: {
+                  ...preferences.weatherProvider,
+                  enableMultiProvider: value,
+                }
+              })}
+              trackColor={{ false: colors.border, true: colors.primaryDark }}
+              thumbColor={preferences.weatherProvider?.enableMultiProvider ? colors.primary : colors.textMuted}
+              accessibilityRole="switch"
+              accessibilityLabel="Enable backup weather provider"
+              accessibilityState={{ checked: preferences.weatherProvider?.enableMultiProvider ?? false }}
+            />
+          </View>
+          <Text style={styles.hint}>
+            Automatically falls back to secondary provider if primary fails
+          </Text>
+
+          {(() => {
+            try {
+              const status = getProviderStatus();
+              return (
+                <View style={styles.providerStatus}>
+                  <View style={styles.providerRow}>
+                    <View style={[styles.statusDot, { backgroundColor: colors.primary }]} />
+                    <Text style={styles.providerName}>Open-Meteo</Text>
+                    <Text style={styles.providerLabel}>Free • Always Available</Text>
+                  </View>
+                  <View style={styles.providerRow}>
+                    <View style={[
+                      styles.statusDot,
+                      { backgroundColor: status.tomorrow.configured ? colors.accent : colors.textMuted }
+                    ]} />
+                    <Text style={styles.providerName}>Tomorrow.io</Text>
+                    <Text style={styles.providerLabel}>
+                      {status.tomorrow.configured ? 'Premium • Configured' : 'Not Configured'}
+                    </Text>
+                  </View>
+                  {!status.tomorrow.configured && (
+                    <View style={styles.configHint}>
+                      <AlertCircle color={colors.textMuted} size={12} />
+                      <Text style={styles.configHintText}>
+                        Add EXPO_PUBLIC_TOMORROW_IO_API_KEY to enable
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              );
+            } catch {
+              return null;
+            }
+          })()}
         </View>
 
         <View style={styles.section}>
@@ -483,5 +551,48 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 11,
     marginTop: 4,
+  },
+  weatherProviderInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  providerStatus: {
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  providerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  providerName: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  providerLabel: {
+    color: colors.textMuted,
+    fontSize: 12,
+    marginLeft: 'auto',
+  },
+  configHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+    paddingLeft: spacing.md,
+  },
+  configHintText: {
+    color: colors.textMuted,
+    fontSize: 11,
   },
 });

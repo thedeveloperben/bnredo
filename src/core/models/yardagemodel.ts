@@ -201,19 +201,6 @@ export class YardageModelEnhanced {
     }
   };
 
-  // Enhanced altitude effects based on O1 model calculations
-  private static readonly ALTITUDE_EFFECTS: Readonly<Record<number, number>> = {
-    0: 1.000,
-    1000: 1.021,
-    2000: 1.043,
-    3000: 1.065,
-    4000: 1.088,
-    5000: 1.112,
-    6000: 1.137,
-    7000: 1.163,
-    8000: 1.190
-  };
-
   // Ball models
   private static readonly BALL_MODELS: Readonly<Record<string, BallModel>> = {
     "tour_premium": {
@@ -250,6 +237,28 @@ export class YardageModelEnhanced {
     return Math.pow(densityRatio, -exponent);
   }
 
+  /**
+   * Calculate air density from temperature, pressure, and humidity.
+   *
+   * IMPORTANT: This function expects STATION PRESSURE (actual local pressure
+   * at the measurement location), not MSL (mean sea level) pressure.
+   *
+   * Station pressure naturally decreases with altitude (~12 hPa per 100m),
+   * so altitude effects on ball flight are automatically incorporated when
+   * using station pressure. No separate altitude adjustment is needed.
+   *
+   * Weather APIs used:
+   * - Open-Meteo: `surface_pressure` (station pressure) ✓
+   * - Tomorrow.io: `pressureSurfaceLevel` (station pressure) ✓
+   *
+   * If using MSL pressure, you must convert to station pressure first:
+   * P_station = P_msl × exp(-g×M×h / (R×T))
+   *
+   * @param tempF Temperature in Fahrenheit
+   * @param pressureMb Pressure in millibars (hPa) - MUST be station pressure
+   * @param humidity Relative humidity (0-100%)
+   * @returns Air density in kg/m³
+   */
   private calculateAirDensity(tempF: number, pressureMb: number, humidity: number): number {
     const tempC = (tempF - 32) * 5/9;
     const pressurePa = pressureMb * 100;

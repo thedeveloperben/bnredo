@@ -8,10 +8,12 @@ import {
   ScrollView,
   Animated,
   AccessibilityInfo,
+  TextInput,
+  Modal,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Lock, Wind, Navigation, Target, Minus, Plus, AlertCircle } from 'lucide-react-native';
+import { Lock, Wind, Navigation, Target, Minus, Plus, AlertCircle, Edit3, Check, X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { colors, spacing, borderRadius, typography, touchTargets } from '@/src/constants/theme';
 import { useWeather } from '@/src/contexts/WeatherContext';
@@ -21,10 +23,11 @@ import { WindResultsModal } from '@/src/components/WindResultsModal';
 import { CompassDisplay } from '@/src/components/CompassDisplay';
 import { useCompassHeading } from '@/src/hooks/useCompassHeading';
 import { useHapticSlider } from '@/src/hooks/useHapticSlider';
+import { formatWindSpeed, formatDistance } from '@/src/utils/unit-conversions';
 
 export default function WindScreen() {
   const insets = useSafeAreaInsets();
-  const { weather } = useWeather();
+  const { weather, updateManualWeather } = useWeather();
   const { preferences, updatePreferences } = useUserPreferences();
   const { heading, hasPermission } = useCompassHeading();
 
@@ -32,6 +35,17 @@ export default function WindScreen() {
   const [lockedHeading, setLockedHeading] = React.useState(0);
   const [showResults, setShowResults] = React.useState(false);
   const [targetYardage, setTargetYardage] = React.useState(150);
+
+  // Manual wind input state
+  const [showManualInput, setShowManualInput] = React.useState(false);
+  const [manualWindSpeed, setManualWindSpeed] = React.useState('');
+  const [manualWindGust, setManualWindGust] = React.useState('');
+  const [manualWindDirection, setManualWindDirection] = React.useState('');
+
+  // Format helpers based on user preferences
+  const windSpeedFormat = formatWindSpeed(weather?.windSpeed ?? 0, preferences.windSpeedUnit);
+  const windGustFormat = formatWindSpeed(weather?.windGust ?? 0, preferences.windSpeedUnit);
+  const distanceFormat = formatDistance(targetYardage, preferences.distanceUnit);
 
   // Haptic feedback for slider every 5 yards
   const { onValueChange: onSliderHaptic, reset: resetSliderHaptic } = useHapticSlider({ interval: 5 });
@@ -129,6 +143,36 @@ export default function WindScreen() {
     return ((weather.windDirection - lockedHeading) + 360) % 360;
   }, [weather, lockedHeading]);
 
+  // Manual wind input handlers
+  const openManualInput = () => {
+    if (weather) {
+      setManualWindSpeed(String(weather.windSpeed));
+      setManualWindGust(String(weather.windGust));
+      setManualWindDirection(String(weather.windDirection));
+    } else {
+      setManualWindSpeed('10');
+      setManualWindGust('15');
+      setManualWindDirection('0');
+    }
+    setShowManualInput(true);
+  };
+
+  const handleManualWindSubmit = async () => {
+    const windSpeed = parseFloat(manualWindSpeed);
+    const windGust = parseFloat(manualWindGust);
+    const windDirection = parseFloat(manualWindDirection);
+
+    if (!isNaN(windSpeed) && !isNaN(windGust) && !isNaN(windDirection)) {
+      await updateManualWeather({
+        windSpeed: Math.max(0, Math.min(100, windSpeed)),
+        windGust: Math.max(0, Math.min(150, windGust)),
+        windDirection: ((windDirection % 360) + 360) % 360,
+      });
+      setShowManualInput(false);
+      triggerHaptic();
+    }
+  };
+
   if (!preferences.isPremium) {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -177,7 +221,7 @@ export default function WindScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >
         <Text style={styles.title}>Wind Calculator</Text>
@@ -203,19 +247,27 @@ export default function WindScreen() {
         )}
 
         {weather ? (
-          <View style={styles.windInfoBar}>
+          <TouchableOpacity
+            style={styles.windInfoBar}
+            onPress={openManualInput}
+            accessibilityRole="button"
+            accessibilityLabel={`Wind ${windSpeedFormat.value} ${windSpeedFormat.shortLabel}, gusts ${windGustFormat.value} ${windGustFormat.shortLabel}. Tap to enter manual wind`}
+            accessibilityHint="Double tap to enter wind data manually"
+          >
             <View style={styles.windInfoItem}>
               <Wind color={colors.accent} size={16} />
               <Text style={styles.windInfoText}>
-                {weather.windSpeed} mph {getWindDirectionLabel(weather.windDirection)}
+                {windSpeedFormat.value} {windSpeedFormat.shortLabel} {getWindDirectionLabel(weather.windDirection)}
               </Text>
             </View>
             <View style={styles.windInfoDivider} />
             <View style={styles.windInfoItem}>
               <Text style={styles.windInfoLabel}>Gusts:</Text>
-              <Text style={styles.windInfoText}>{weather.windGust} mph</Text>
+              <Text style={styles.windInfoText}>{windGustFormat.value} {windGustFormat.shortLabel}</Text>
             </View>
-          </View>
+            <View style={styles.windInfoDivider} />
+            <Edit3 color={colors.textSecondary} size={14} />
+          </TouchableOpacity>
         ) : (
           <View style={styles.noWeatherBar}>
             <AlertCircle color={colors.textMuted} size={16} />
@@ -225,7 +277,7 @@ export default function WindScreen() {
 
         <View style={styles.distanceSection}>
           <Text style={styles.distanceLabel}>Target Distance</Text>
-          <Text style={styles.distanceValue}>{targetYardage} yds</Text>
+          <Text style={styles.distanceValue}>{distanceFormat.value} {distanceFormat.shortLabel}</Text>
 
           <View style={styles.sliderContainer}>
             <TouchableOpacity
@@ -293,6 +345,7 @@ export default function WindScreen() {
         <Animated.View
           style={[
             styles.lockButton,
+            { bottom: 40 + insets.bottom },
             preferences.handPreference === 'left' && styles.lockButtonLeft,
             !weather && styles.lockButtonDisabled,
             { transform: [{ scale: lockButtonScale }] },
@@ -304,6 +357,79 @@ export default function WindScreen() {
           </Text>
         </Animated.View>
       </TouchableOpacity>
+
+      {/* Manual Wind Input Modal */}
+      <Modal
+        visible={showManualInput}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowManualInput(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { paddingBottom: insets.bottom + spacing.lg }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Manual Wind Entry</Text>
+              <TouchableOpacity
+                onPress={() => setShowManualInput(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel"
+              >
+                <X color={colors.text} size={24} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Wind Speed ({preferences.windSpeedUnit === 'kmh' ? 'km/h' : 'mph'})</Text>
+              <TextInput
+                style={styles.textInput}
+                value={manualWindSpeed}
+                onChangeText={setManualWindSpeed}
+                keyboardType="numeric"
+                placeholder="10"
+                placeholderTextColor={colors.textMuted}
+                accessibilityLabel="Wind speed"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Gust Speed ({preferences.windSpeedUnit === 'kmh' ? 'km/h' : 'mph'})</Text>
+              <TextInput
+                style={styles.textInput}
+                value={manualWindGust}
+                onChangeText={setManualWindGust}
+                keyboardType="numeric"
+                placeholder="15"
+                placeholderTextColor={colors.textMuted}
+                accessibilityLabel="Gust speed"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Wind Direction (0-360°)</Text>
+              <TextInput
+                style={styles.textInput}
+                value={manualWindDirection}
+                onChangeText={setManualWindDirection}
+                keyboardType="numeric"
+                placeholder="0"
+                placeholderTextColor={colors.textMuted}
+                accessibilityLabel="Wind direction in degrees"
+              />
+              <Text style={styles.inputHint}>0° = North, 90° = East, 180° = South, 270° = West</Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.submitButton}
+              onPress={handleManualWindSubmit}
+              accessibilityRole="button"
+              accessibilityLabel="Apply manual wind settings"
+            >
+              <Check color={colors.white} size={20} />
+              <Text style={styles.submitButtonText}>Apply</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       <WindResultsModal
         visible={showResults}
@@ -324,7 +450,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 120,
     paddingHorizontal: spacing.md,
   },
   title: {
@@ -535,7 +660,6 @@ const styles = StyleSheet.create({
   },
   lockButton: {
     position: 'absolute',
-    bottom: 40,
     right: spacing.lg,
     backgroundColor: colors.primary,
     flexDirection: 'row',
@@ -571,5 +695,64 @@ const styles = StyleSheet.create({
   },
   lockButtonTextDisabled: {
     color: colors.textMuted,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
+    padding: spacing.lg,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  modalTitle: {
+    ...typography.headline,
+    color: colors.text,
+  },
+  inputGroup: {
+    marginBottom: spacing.md,
+  },
+  inputLabel: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    marginBottom: spacing.xs,
+  },
+  textInput: {
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    color: colors.text,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  inputHint: {
+    color: colors.textMuted,
+    fontSize: 11,
+    marginTop: spacing.xs,
+  },
+  submitButton: {
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  submitButtonText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '700',
   },
 });
