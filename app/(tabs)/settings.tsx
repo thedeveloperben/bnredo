@@ -204,8 +204,8 @@ export default function SettingsScreen() {
             'Dominant Hand',
             preferences.handPreference,
             [
-              { label: 'Right', value: 'right' },
               { label: 'Left', value: 'left' },
+              { label: 'Right', value: 'right' },
             ],
             value => updatePreferences({ handPreference: value as 'right' | 'left' })
           )}

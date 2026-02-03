@@ -15,7 +15,7 @@ import { WeatherCard } from '@/src/components/WeatherCard';
 import { useWeather } from '@/src/contexts/WeatherContext';
 import { useClubBag } from '@/src/contexts/ClubBagContext';
 import { useUserPreferences } from '@/src/contexts/UserPreferencesContext';
-import { EnvironmentalCalculator } from '@/src/core/services/environmental-calculations';
+import { YardageModelEnhanced, SkillLevel } from '@/src/core/models/yardagemodel';
 import { useHapticSlider } from '@/src/hooks/useHapticSlider';
 import { formatDistance } from '@/src/utils/unit-conversions';
 
@@ -34,30 +34,38 @@ export default function ShotScreen() {
   const calculations = React.useMemo(() => {
     if (!weather) return null;
 
-    const conditions = {
-      temperature: weather.temperature,
-      humidity: weather.humidity,
-      pressure: weather.pressure,
-      altitude: weather.altitude,
-      windSpeed: 0,
-      windDirection: 0,
-      windGust: 0,
-      density: EnvironmentalCalculator.calculateAirDensity({
-        temperature: weather.temperature,
-        humidity: weather.humidity,
-        pressure: weather.pressure,
-      }),
-    };
+    // Use YardageModelEnhanced for environmental calculations (same as wind calculator)
+    const yardageModel = new YardageModelEnhanced();
+    yardageModel.setBallModel('tour_premium');
+    
+    // Set conditions with NO wind (shot calculator doesn't include wind)
+    yardageModel.setConditions(
+      weather.temperature,
+      weather.altitude,
+      0, // No wind
+      0, // No wind direction
+      weather.pressure,
+      weather.humidity
+    );
 
-    const adjustments = EnvironmentalCalculator.calculateShotAdjustments(conditions);
+    // Use 7-iron as reference club (environmental factor doesn't depend on club choice)
+    const envResult = yardageModel.calculateAdjustedYardage(
+      targetYardage,
+      SkillLevel.PROFESSIONAL,
+      '7-iron'
+    );
 
-    // Altitude effect is already included in air density (station pressure reflects elevation)
-    const totalAdjustmentPercent = adjustments.distanceAdjustment;
-    const adjustedYardage = Math.round(targetYardage * (1 - totalAdjustmentPercent / 100));
+    // Calculate environmental effect in yards (positive = plays longer)
+    const envEffectYards = -(envResult.carryDistance - targetYardage);
+    
+    // Convert to percentage for display
+    const totalAdjustmentPercent = (envEffectYards / targetYardage) * 100;
+    
+    // Adjusted yardage is the "plays like" distance
+    const adjustedYardage = Math.round(targetYardage + envEffectYards);
 
     return {
       adjustedYardage,
-      adjustments,
       totalAdjustmentPercent,
     };
   }, [weather, targetYardage]);
