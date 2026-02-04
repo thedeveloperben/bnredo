@@ -1,7 +1,7 @@
 import * as React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { colors, spacing, borderRadius } from '@/src/constants/theme';
+import { View } from 'react-native';
 import { Skeleton } from './Skeleton';
+import { styles } from '@/src/styles/ui/WeatherCardSkeleton.styles';
 
 /**
  * Skeleton loading state for WeatherCard.
@@ -46,36 +46,3 @@ function GridItemSkeleton() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
-    marginHorizontal: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  grid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  gridItem: {
-    alignItems: 'center',
-    gap: 4,
-  },
-  valueGap: {
-    marginTop: 4,
-  },
-});

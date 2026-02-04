@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, ViewStyle, StyleProp } from 'react-native';
+import { ViewStyle, StyleProp } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -8,8 +8,9 @@ import Animated, {
   interpolate,
   Easing,
 } from 'react-native-reanimated';
-import { colors, borderRadius } from '@/src/constants/theme';
+import { borderRadius } from '@/src/constants/theme';
 import { useReduceMotion } from '@/src/hooks/useReduceMotion';
+import { styles } from '@/src/styles/ui/Skeleton.styles';
 
 interface SkeletonProps {
   /** Width of the skeleton */
@@ -100,9 +101,3 @@ export function Skeleton({
     />
   );
 }
-
-const styles = StyleSheet.create({
-  skeleton: {
-    backgroundColor: colors.surfaceElevated,
-  },
-});
