@@ -1,8 +1,8 @@
 import { Tabs } from 'expo-router';
-import { Platform, StyleSheet } from 'react-native';
 import { Flag, Wind, Settings, Lock } from 'lucide-react-native';
 import { colors } from '@/src/constants/theme';
 import { useUserPreferences } from '@/src/contexts/UserPreferencesContext';
+import { styles } from '@/src/styles/screens/layout.styles';
 
 export default function TabLayout() {
   const { preferences } = useUserPreferences();
@@ -63,18 +63,3 @@ export default function TabLayout() {
     </Tabs>
   );
 }
-
-const styles = StyleSheet.create({
-  tabBar: {
-    backgroundColor: colors.surface,
-    borderTopColor: colors.border,
-    borderTopWidth: 1,
-    height: Platform.OS === 'ios' ? 88 : 64,
-    paddingTop: 8,
-    paddingBottom: Platform.OS === 'ios' ? 28 : 8,
-  },
-  tabBarLabel: {
-    fontSize: 11,
-    fontWeight: '500',
-  },
-});
