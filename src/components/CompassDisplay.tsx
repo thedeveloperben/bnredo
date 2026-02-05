@@ -1,11 +1,12 @@
 import * as React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text } from 'react-native';
 import Svg, { Circle, Line, Polygon, G, Text as SvgText, Defs, RadialGradient, Stop } from 'react-native-svg';
 import { colors } from '@/src/constants/theme';
 import { useReduceMotion } from '@/src/hooks/useReduceMotion';
 import { useUserPreferences } from '@/src/contexts/UserPreferencesContext';
 import { getWindColor, getWindEffectDescription } from '@/src/features/wind/utils/wind-colors';
 import { formatWindSpeed } from '@/src/utils/unit-conversions';
+import { styles } from '@/src/styles/components/CompassDisplay.styles';
 
 interface CompassDisplayProps {
   heading: number;
@@ -334,49 +335,4 @@ export const CompassDisplay = React.memo(function CompassDisplay({ heading, wind
       </View>
     </View>
   );
-});
-
-const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  legendRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 24,
-    marginTop: 12,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  legendDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  legendText: {
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
-  headingContainer: {
-    marginTop: 12,
-    alignItems: 'center',
-  },
-  headingValue: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  headingLabel: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginTop: 4,
-  },
-  headingLabelLocked: {
-    color: colors.primary,
-    fontWeight: '600',
-  },
 });

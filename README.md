@@ -1,101 +1,138 @@
-# AI Caddy Pro
+# BnRedo - Golf Shot Calculator
 
-A smart golf shot calculator that uses physics and real-time weather data to help golfers understand how environmental conditions affect their shots.
+A premium golf shot calculator app built with Expo (SDK 54) and React Native, featuring advanced physics-based calculations with environmental adjustments.
 
-## 🎯 What It Does
+## Features
 
-AI Caddy Pro calculates:
-- How environmental conditions (temperature, altitude, humidity, wind) affect shot distance
-- Which club to use for any target distance
-- Advanced wind analysis with compass integration (premium)
-- Real-time weather data from your current location
+- **Shot Distance Calculator**: Physics-based distance calculations with environmental factors
+- **Wind Calculator**: Advanced wind analysis with compass integration (premium feature)
+- **Weather Integration**: Real-time weather data from multiple providers
+- **Club Management**: Customizable club bag with performance tracking
+- **Multi-Provider Weather**: Tomorrow.io (premium) with Open-Meteo fallback
 
-## 📱 Features
+## Quick Start
 
-- **Shot Calculator** - Environmental impact on shot distance
-- **Wind Calculator** (Premium) - Advanced wind analysis with real-time compass
-- **Club Manager** - Customize your club distances
-- **Weather Integration** - Real-time local weather data
-- **Cloud Sync** - Sync settings across devices
+### Prerequisites
 
-## 🚀 Quick Start
+- Node.js 18+ and npm
+- Expo CLI (`npm install -g expo-cli`)
+- iOS Simulator (Mac) or Android Studio for mobile development
 
+### Installation
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/thedeveloperben/bnredo.git
+   cd bnredo
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+
+3. **Configure API keys** (see [API Key Setup](#api-key-setup)):
+   ```bash
+   cp .env.example .env
+   # Edit .env with your API keys
+   ```
+
+4. **Start the development server**:
+   ```bash
+   npm run dev
+   ```
+
+## API Key Setup
+
+This application requires API keys for full functionality. See detailed documentation in [`docs/API_KEY_STORAGE.md`](./docs/API_KEY_STORAGE.md).
+
+### Required Keys
+
+Get these from [Supabase Dashboard](https://supabase.com/dashboard):
+- `EXPO_PUBLIC_SUPABASE_URL` - Your Supabase project URL
+- `EXPO_PUBLIC_SUPABASE_ANON_KEY` - Your Supabase anonymous key
+
+### Optional Keys
+
+Get from [Tomorrow.io](https://www.tomorrow.io/weather-api/):
+- `EXPO_PUBLIC_TOMORROW_IO_API_KEY` - Premium weather data (falls back to free Open-Meteo)
+
+Add these to your `.env` file:
 ```bash
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-
-# Run tests
-npm test
-
-# Build for production
-npm run build:web
+EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+EXPO_PUBLIC_TOMORROW_IO_API_KEY=your-tomorrow-io-key-here
 ```
 
-## 📚 Documentation
+**Important**: Restart the Expo dev server after changing `.env`.
 
-Comprehensive documentation is available in the [`/docs`](./docs) folder:
-
-- **[Getting Started (For Beginners)](./docs/README.md)** - Non-technical overview for users
-- **[Architecture](./docs/ARCHITECTURE.md)** - Technical architecture and design patterns
-- **[Features](./docs/FEATURES.md)** - Detailed feature explanations
-- **[API Documentation](./docs/API.md)** - External services and internal APIs
-- **[Development Setup](./docs/DEVELOPMENT.md)** - Setup guide for developers
-- **[Physics Engine](./docs/PHYSICS.md)** - Mathematics behind calculations
-- **[Testing Guide](./docs/TESTING.md)** - Testing strategy and examples
-
-## 🛠️ Tech Stack
-
-- **React Native** with **Expo 54**
-- **TypeScript** for type safety
-- **Expo Router** for file-based navigation
-- **Supabase** for authentication and cloud sync
-- **Open-Meteo API** for weather data
-- **Jest** and **Playwright** for testing
-
-## 🎓 For Developers
+## Available Commands
 
 ```bash
-# Type check
-npm run typecheck
-
-# Lint code
-npm run lint
-
-# Run tests with coverage
-npm run test:coverage
-
-# Build native apps
-npm run build:ios:sim    # iOS Simulator
-npm run build:ios:device # iOS Device
+npm run dev              # Start Expo development server
+npm run build:web        # Build for web deployment
+npm run lint             # Run ESLint
+npm run typecheck        # Run TypeScript type checking
 ```
 
-See [DEVELOPMENT.md](./docs/DEVELOPMENT.md) for complete setup instructions.
+## Project Structure
 
-## 🏌️ For Golfers
+```
+app/                     # Expo Router screens (file-based routing)
+  (tabs)/               # Tab navigation
+    index.tsx           # Shot calculator
+    wind.tsx            # Wind calculator (premium)
+    settings.tsx        # Settings
+src/
+  core/
+    models/             # Physics models (YardageModelEnhanced)
+    services/           # Environmental & wind calculations
+  contexts/             # React contexts (Weather, ClubBag, Preferences)
+  components/           # Reusable UI components
+  services/             # External services (weather APIs)
+  lib/                  # Third-party integrations (Supabase)
+  constants/            # Design tokens and configuration
+docs/                   # Documentation
+```
 
-Check out the [beginner-friendly guide](./docs/README.md) to learn:
-- How to use the app
-- What the calculations mean
-- How weather affects your shots
-- Tips for best results
+## Documentation
 
-## 📄 License
+- **[API Key Storage](./docs/API_KEY_STORAGE.md)** - How API keys are stored and managed
+- **[CLAUDE.md](./CLAUDE.md)** - AI assistant guidance for development
 
-See the repository for license information.
+## Technology Stack
 
-## 🤝 Contributing
+- **Framework**: Expo SDK 54 with React Native
+- **Routing**: Expo Router (file-based)
+- **Backend**: Supabase (Auth, Database)
+- **Weather**: Tomorrow.io (premium) / Open-Meteo (free fallback)
+- **Storage**: AsyncStorage for local data
+- **Language**: TypeScript
+- **Styling**: NativeWind (TailwindCSS for React Native)
 
-1. Read [DEVELOPMENT.md](./docs/DEVELOPMENT.md)
-2. Fork the repository
-3. Create a feature branch
-4. Make your changes
-5. Add tests
-6. Update documentation
-7. Submit a pull request
+## Architecture Highlights
 
----
+- **Physics Engine**: Advanced ball flight modeling with Magnus effect
+- **Weather Provider Orchestration**: Automatic fallback between multiple providers
+- **Graceful Degradation**: App works with missing optional features
+- **Type Safety**: Full TypeScript coverage with strict mode
+- **Context-Based State**: React contexts for cross-cutting concerns
 
-**Ready to improve your golf game with science?** 🏌️‍♂️⛳
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## License
+
+[Add license information]
+
+## Support
+
+For issues and questions:
+- Open an issue on GitHub
+- Check documentation in `docs/` directory
+- Review `CLAUDE.md` for development guidance

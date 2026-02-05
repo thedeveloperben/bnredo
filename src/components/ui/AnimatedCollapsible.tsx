@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, ViewStyle, StyleProp } from 'react-native';
+import { ViewStyle, StyleProp } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -9,6 +9,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useReduceMotion } from '@/src/hooks/useReduceMotion';
 import { animation } from '@/src/constants/theme';
+import { styles } from '@/src/styles/ui/AnimatedCollapsible.styles';
 
 interface AnimatedCollapsibleProps {
   /** Whether the content is expanded */
@@ -98,9 +99,3 @@ export function AnimatedCollapsible({
     </Animated.View>
   );
 }
-
-const styles = StyleSheet.create({
-  content: {
-    // Position absolute for measuring while collapsed
-  },
-});

@@ -14,8 +14,9 @@ import {
   Platform,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { colors, borderRadius, glass, spacing } from '@/src/constants/theme';
+import { borderRadius, glass, spacing } from '@/src/constants/theme';
 import { useReduceMotion } from '@/src/hooks/useReduceMotion';
+import { styles } from '@/src/styles/ui/GlassCard.styles';
 
 export interface GlassCardProps {
   children: React.ReactNode;
@@ -105,12 +106,3 @@ export function GlassCard({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  tintOverlay: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  fallbackBackground: {
-    backgroundColor: colors.surfaceElevated,
-  },
-});
