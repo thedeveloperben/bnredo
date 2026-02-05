@@ -9,7 +9,6 @@ import React, { useCallback } from 'react';
 import {
   Pressable,
   Text,
-  StyleSheet,
   ViewStyle,
   TextStyle,
   StyleProp,
@@ -25,6 +24,7 @@ import {
   touchTargets,
 } from '@/src/constants/theme';
 import { useReduceMotion } from '@/src/hooks/useReduceMotion';
+import { styles } from '@/src/styles/ui/GradientButton.styles';
 
 export type GradientButtonVariant = 'primary' | 'accent' | 'danger' | 'muted';
 export type GradientButtonSize = 'sm' | 'md' | 'lg';
@@ -160,17 +160,3 @@ export function GradientButton({
     </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  gradient: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  fullWidth: {
-    width: '100%',
-  },
-  autoWidth: {
-    alignSelf: 'flex-start',
-  },
-});
